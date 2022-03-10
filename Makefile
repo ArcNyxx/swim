@@ -31,6 +31,13 @@ clean:
 dclean:
 	rm -f dwm $(OBJ) config.h
 
+dinst: dclean dwm
+	cp -f dwm /usr/local/bin/sdwm
+	chmod 755 /usr/local/bin/sdwm
+
+duninst:
+	rm -f /usr/local/bin/sdwm
+
 dist: clean
 	mkdir -p dwm-${VERSION}
 	cp -R LICENSE Makefile README config.def.h config.mk\
