@@ -46,14 +46,15 @@
 
 /* macros */
 #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
+#define CBW(client)             2*client->bw
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define WIDTH(X)                ((X)->w + 2 * (X)->bw)
-#define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
+#define WIDTH(X)                ((X)->w + CBW(X))
+#define HEIGHT(X)               ((X)->h + CBW(X))
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
@@ -1578,37 +1579,50 @@ tagmon(const Arg *arg)
 }
 
 void
-tile(Monitor *m)
+tile(Monitor *mon)
 {
-	unsigned int i, n, h, r, mw, my, ty;
-	Client *c;
-
-	/* gap shortcuts */
-	unsigned int gih = GAPIH * gap, giv = GAPIV * gap, goh = GAPOH * gap,
-		     gov = GAPOV * gap;
-
-	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
-	if (n == 0)
+	unsigned int totcli = 0;
+	Client *client = nexttiled(mon->clients);
+	while (client != NULL)
+		++totcli, client = nexttiled(client->next);
+	if (totcli == 0)
 		return;
+	client = nexttiled(mon->clients);
 
-	if (n > m->nmaster)
-		mw = m->nmaster ? (m->ww + giv) * m->mfact : 0;
-	else
-		mw = m->ww - 2*gov + giv;
-	for (i = 0, my = ty = goh, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-		if (i < m->nmaster) {
-			r = MIN(n, m->nmaster) - i;
-			h = (m->wh - my - goh - gih * (r - 1)) / r;
-			resize(c, m->wx + gov, m->wy + my, mw - (2*c->bw) - giv, h - (2*c->bw), 0);
-			if (my + HEIGHT(c) + gih < m->wh)
-			my += HEIGHT(c) + gih;
-		} else {
-			r = n - i;
-			h = (m->wh - ty - goh - gih * (r - 1)) / r;
-			resize(c, m->wx + mw + gov, m->wy + ty, m->ww - mw - (2*c->bw) - 2*gov, h - (2*c->bw), 0);
-			if (ty + HEIGHT(c) + gih < m->wh)
-				ty += HEIGHT(c) + gih;
-		}
+	unsigned int width;
+	if (totcli > mon->nmaster && mon->nmaster != 0)
+		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact;
+	else /* master takes up entire monitor */
+		width = mon->ww - 2*GAPOH*gap;
+
+	unsigned int clinum, totgap = 0;
+	for (clinum = 0; clinum < mon->nmaster && client != NULL;
+			++clinum, client = nexttiled(client->next)) {
+		unsigned int numdown = MIN(totcli, mon->nmaster) - clinum;
+		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
+				GAPIV*gap * (numdown - 1)) / numdown;
+		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
+				GAPOV*gap, width - CBW(client),
+				height - CBW(client), 0);
+
+		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
+			totgap += HEIGHT(client) + GAPIH*gap;
+	}
+
+	totgap = 0;
+	for (; client != NULL; ++clinum, client = nexttiled(client->next)) {
+		unsigned int numdown = totcli - clinum;
+		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
+				GAPIV*gap * (numdown - 1)) / numdown;
+		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
+				mon->wy + totgap + GAPOH*gap,
+				mon->ww - width - CBW(client) -
+				2*GAPOV*gap - GAPIV*gap,
+				height - CBW(client), 0);
+
+		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
+			totgap += HEIGHT(client) + GAPIH*gap;
+	}
 }
 
 void
