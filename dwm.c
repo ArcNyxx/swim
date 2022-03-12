@@ -107,8 +107,8 @@ typedef struct {
 } Key;
 
 struct Monitor {
-	float mfact;
-	int nmaster;
+	unsigned int mfact;
+	unsigned int nmaster;
 	int num;
 	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
@@ -1418,18 +1418,18 @@ togglegaps(const Arg *arg)
 	arrange(selmon);
 }
 
-/* arg > 1.0 will set mfact absolutely */
+/* arg > 100 will set mfact absolutely */
 void
 setmfact(const Arg *arg)
 {
-	float f;
+	unsigned int newmfact;
 
 	if (!arg)
 		return;
-	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
-	if (f < 0.05 || f > 0.95)
+	newmfact = arg->i > 100 ? arg->i - 100 : selmon->mfact + arg->i;
+	if (newmfact < 5 || newmfact > 95)
 		return;
-	selmon->mfact = f;
+	selmon->mfact = newmfact;
 	arrange(selmon);
 }
 
@@ -1588,7 +1588,7 @@ tile(Monitor *mon)
 
 	unsigned int width; /* width of master/fullwidth windows */
 	if (totcli > mon->nmaster) /* master and stacking windows separate */
-		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact;
+		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact / 100;
 	else /* master takes up entire monitor */
 		width = mon->ww - 2*GAPOH*gap;
 
