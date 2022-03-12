@@ -46,15 +46,14 @@
 
 /* macros */
 #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
-#define CBW(client)             2*client->bw
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define WIDTH(X)                ((X)->w + CBW(X))
-#define HEIGHT(X)               ((X)->h + CBW(X))
+#define WIDTH(X)                ((X)->w + 2*(X)->bw)
+#define HEIGHT(X)               ((X)->h + 2*(X)->bw)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
@@ -898,7 +897,7 @@ grabkeys(void)
 void
 incnmaster(const Arg *arg)
 {
-	selmon->nmaster = MAX(selmon->nmaster + arg->i, 0);
+	selmon->nmaster = MAX(selmon->nmaster + arg->i, 1);
 	arrange(selmon);
 }
 
@@ -1581,44 +1580,44 @@ tagmon(const Arg *arg)
 void
 tile(Monitor *mon)
 {
-	unsigned int totcli = 0;
+	unsigned int totcli; /* total number of clients */
 	Client *client = nexttiled(mon->clients);
-	while (client != NULL)
-		++totcli, client = nexttiled(client->next);
-	if (totcli == 0)
-		return;
+	for (totcli = 0; client != NULL; ++totcli)
+		client = nexttiled(client->next);
 	client = nexttiled(mon->clients);
 
-	unsigned int width;
-	if (totcli > mon->nmaster && mon->nmaster != 0)
+	unsigned int width; /* width of master/fullwidth windows */
+	if (totcli > mon->nmaster) /* master and stacking windows separate */
 		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact;
 	else /* master takes up entire monitor */
 		width = mon->ww - 2*GAPOH*gap;
 
-	unsigned int clinum, totgap = 0;
-	for (clinum = 0; clinum < mon->nmaster && client != NULL;
-			++clinum, client = nexttiled(client->next)) {
+	/* master/fullwidth windows handler */
+	unsigned int clinum = 0, totgap = 0; /* client number and spacing */
+	for (; clinum < mon->nmaster && client != NULL; ++clinum,
+			client = nexttiled(client->next)) {
 		unsigned int numdown = MIN(totcli, mon->nmaster) - clinum;
 		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
-				GAPOV*gap, width - CBW(client),
-				height - CBW(client), 0);
+				GAPOV*gap, width - 2*client->bw,
+				height - 2*client->bw, 0);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
 	}
+	totgap = 0; /* reset for next handler to use */
 
-	totgap = 0;
+	/* stacking windows handler */
 	for (; client != NULL; ++clinum, client = nexttiled(client->next)) {
 		unsigned int numdown = totcli - clinum;
 		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
 				mon->wy + totgap + GAPOH*gap,
-				mon->ww - width - CBW(client) -
+				mon->ww - width - 2*client->bw -
 				2*GAPOV*gap - GAPIV*gap,
-				height - CBW(client), 0);
+				height - 2*client->bw, 0);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
