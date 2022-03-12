@@ -1,48 +1,32 @@
-dwm - dynamic window manager
+swim - simple window manager
 ============================
-dwm is an extremely fast, small, and dynamic window manager for X.
-
+swim is a quick and tiny window manager for X.
 
 Requirements
 ------------
-In order to build dwm you need the Xlib header files.
-
+swim required the Xlib header files alongside a few optional extensions.
 
 Installation
 ------------
-Edit config.mk to match your local setup (dwm is installed into
-the /usr/local namespace by default).
+swim comes with a Makefile and config.mk file for configurable building and
+testing.  Edit the latter to match your local setup (swim is installed into the
+/usr/local namespace by default, you may need to modify your $PATH).
 
-Afterwards enter the following command to build and install dwm (if
-necessary as root):
+swim can be built and installed with the following command (run as root):
 
     make clean install
 
 
-Running dwm
------------
-Add the following line to your .xinitrc to start dwm using startx:
+Usage
+-----
+swim can be run by adding it to the .xinitrc file or by supplying it as an
+argument to startx.  Add the following line to the end of your .xinitrc file if
+using the former option:
 
-    exec dwm
-
-In order to connect dwm to a specific display, make sure that
-the DISPLAY environment variable is set correctly, e.g.:
-
-    DISPLAY=foo.bar:1 exec dwm
-
-(This will start dwm on display :1 of the host foo.bar.)
-
-In order to display status info in the bar, you can do something
-like this in your .xinitrc:
-
-    while xsetroot -name "`date` `uptime | sed 's/.*,//'`"
-    do
-    	sleep 1
-    done &
-    exec dwm
+    exec swim
 
 
 Configuration
 -------------
-The configuration of dwm is done by creating a custom config.h
-and (re)compiling the source code.
+swim can be configured by editing the generated config.h file and (re)compiling
+the source code.  This keeps it fast, simple, and secure.
