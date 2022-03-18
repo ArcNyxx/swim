@@ -35,7 +35,7 @@ clean:
 devclean: clean
 	rm config.h
 
-devswim: devclean
+devswim: devclean install
 
 dist: clean
 	mkdir -p swim-$(VERSION)
