@@ -1,8 +1,17 @@
-/* See LICENSE file for copyright and license details. */
+/* swim - simple window manager
+ * Copyright (C) 2022 ArcNyxx
+ * see LICENCE file for licensing information */
 
-#define MAX(A, B)               ((A) > (B) ? (A) : (B))
-#define MIN(A, B)               ((A) < (B) ? (A) : (B))
-#define BETWEEN(X, A, B)        ((A) <= (X) && (X) <= (B))
+#define MAX(num1, num2) ((num1) > (num2) ? (num1) : (num2))
+#define MIN(num1, num2) ((num1) < (num2) ? (num1) : (num2))
+#define BET(mid, low, high) ((mid) >= (low) && (mid) <= (high))
+
+#define LENGTH(array) (sizeof(array) / sizeof(array[0]))
+
+#define VISIBLE(client) (client->tags & client->mon->tags)
+#define WIDTH(client) (client->w + 2 * client->bw)
+#define HEIGHT(client) (client->h + 2 * client->bw)
 
 void die(const char *fmt, ...);
-void *ecalloc(size_t nmemb, size_t size);
+void *scalloc(size_t nmemb, size_t size);
+void *srealloc(void *ptr, size_t size);

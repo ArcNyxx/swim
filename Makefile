@@ -33,7 +33,7 @@ clean:
 	rm -f swim $(OBJ) swim-*.tar.gz
 
 devclean: clean
-	rm config.h
+	rm -f config.h
 
 devswim: devclean install
 

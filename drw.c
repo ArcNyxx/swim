@@ -28,7 +28,7 @@ utf8decodebyte(const char c, size_t *i)
 static size_t
 utf8validate(long *u, size_t i)
 {
-	if (!BETWEEN(*u, utfmin[i], utfmax[i]) || BETWEEN(*u, 0xD800, 0xDFFF))
+	if (!BET(*u, utfmin[i], utfmax[i]) || BET(*u, 0xD800, 0xDFFF))
 		*u = UTF_INVALID;
 	for (i = 1; *u > utfmax[i]; ++i)
 		;
@@ -45,7 +45,7 @@ utf8decode(const char *c, long *u, size_t clen)
 	if (!clen)
 		return 0;
 	udecoded = utf8decodebyte(c[0], &len);
-	if (!BETWEEN(len, 1, UTF_SIZ))
+	if (!BET(len, 1, UTF_SIZ))
 		return 1;
 	for (i = 1, j = 1; i < clen && j < len; ++i, ++j) {
 		udecoded = (udecoded << 6) | utf8decodebyte(c[i], &type);
@@ -63,7 +63,7 @@ utf8decode(const char *c, long *u, size_t clen)
 Drw *
 drw_create(Display *dpy, int screen, Window root, unsigned int w, unsigned int h)
 {
-	Drw *drw = ecalloc(1, sizeof(Drw));
+	Drw *drw = scalloc(1, sizeof(Drw));
 
 	drw->dpy = dpy;
 	drw->screen = screen;
@@ -146,7 +146,7 @@ xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern)
 		return NULL;
 	}
 
-	font = ecalloc(1, sizeof(Fnt));
+	font = scalloc(1, sizeof(Fnt));
 	font->xfont = xfont;
 	font->pattern = pattern;
 	font->h = xfont->ascent + xfont->descent;
@@ -216,7 +216,7 @@ drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount)
 	Clr *ret;
 
 	/* need at least two colors for a scheme */
-	if (!drw || !clrnames || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(XftColor))))
+	if (!drw || !clrnames || clrcount < 2 || !(ret = scalloc(clrcount, sizeof(XftColor))))
 		return NULL;
 
 	for (i = 0; i < clrcount; i++)
@@ -419,7 +419,7 @@ drw_cur_create(Drw *drw, int shape)
 {
 	Cur *cur;
 
-	if (!drw || !(cur = ecalloc(1, sizeof(Cur))))
+	if (!drw || !(cur = scalloc(1, sizeof(Cur))))
 		return NULL;
 
 	cur->cursor = XCreateFontCursor(drw->dpy, shape);

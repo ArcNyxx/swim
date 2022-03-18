@@ -1,4 +1,7 @@
-/* See LICENSE file for copyright and license details. */
+/* swim - simple window manager
+ * Copyright (C) 2022 ArcNyxx
+ * see LICENCE file for licensing information */
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,30 +9,33 @@
 
 #include "util.h"
 
-void *
-ecalloc(size_t nmemb, size_t size)
+void
+die(const char *fmt, ...)
 {
-	void *p;
+	if (fmt[strlen(fmt) - 1] == '\n') {
+		va_list list;
+		va_start(list, fmt);
+		vfprintf(stderr, fmt, list);
+		va_end(list);
+	} else {
+		perror(fmt);
+	}
+	exit(1);
+}
 
-	if (!(p = calloc(nmemb, size)))
-		die("calloc:");
-	return p;
+void *
+scalloc(size_t nmemb, size_t size)
+{
+	void *ptr;
+	if ((ptr = calloc(nmemb, size)) == NULL)
+		die("swim: unable to allocate memory");
+	return ptr;
 }
 
 void
-die(const char *fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-
-	if (fmt[0] && fmt[strlen(fmt)-1] == ':') {
-		fputc(' ', stderr);
-		perror(NULL);
-	} else {
-		fputc('\n', stderr);
-	}
-
-	exit(1);
+*srealloc(void *ptr, size_t size)
+{
+	if ((ptr = realloc(ptr, size)) == NULL)
+		die("swim: unable to allocate memory");
+	return ptr;
 }
