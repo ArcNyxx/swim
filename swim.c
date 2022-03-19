@@ -1557,7 +1557,7 @@ spawn(const Arg *arg)
 void
 tag(const Arg *arg)
 {
-	if (selmon->sel && arg->ui & TAGMASK) {
+	if (selmon->sel != NULL && (arg->ui & TAGMASK) != 0) {
 		selmon->sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
@@ -1645,12 +1645,11 @@ togglefloating(const Arg *arg)
 void
 toggletag(const Arg *arg)
 {
-	unsigned int newtags;
-
-	if (!selmon->sel)
+	if (selmon->sel == NULL)
 		return;
-	newtags = selmon->sel->tags ^ (arg->ui & TAGMASK);
-	if (newtags) {
+
+	unsigned int newtags;
+	if ((newtags = selmon->sel->tags ^ (arg->ui & TAGMASK)) != 0) {
 		selmon->sel->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
@@ -1660,10 +1659,9 @@ toggletag(const Arg *arg)
 void
 toggleview(const Arg *arg)
 {
-	unsigned int newtagset = selmon->tags ^ (arg->ui & TAGMASK);
-
-	if (newtagset) {
-		selmon->tags = newtagset;
+	unsigned int newtags;
+	if ((newtags = selmon->tags ^ (arg->ui & TAGMASK)) != 0) {
+		selmon->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
 	}
@@ -1958,12 +1956,11 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	if ((arg->ui & TAGMASK) == selmon->tags)
-		return;
-	if (arg->ui & TAGMASK)
+	if ((arg->ui & TAGMASK) != 0) {
 		selmon->tags = arg->ui & TAGMASK;
-	focus(NULL);
-	arrange(selmon);
+		focus(NULL);
+		arrange(selmon);
+	}
 }
 
 Client *
