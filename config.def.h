@@ -62,7 +62,6 @@ static Key keys[] = {
 	{ MODKEY,                       XK_l,      setmfact,       {.i = +5} },
 	{ MODKEY|Mod4Mask,              XK_0,      togglegaps,     {0} },
 	{ MODKEY,                       XK_Return, zoom,           {0} },
-	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },

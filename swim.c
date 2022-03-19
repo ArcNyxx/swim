@@ -49,7 +49,6 @@
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
@@ -110,8 +109,7 @@ struct Monitor {
 	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
-	unsigned int seltags;
-	unsigned int tagset[2];
+	unsigned int tags;
 	int showbar;
 	int topbar;
 	Client *clients;
@@ -541,7 +539,7 @@ configurerequest(XEvent *e)
 				c->y = m->my + (m->mh / 2 - HEIGHT(c) / 2); /* center in y direction */
 			if ((ev->value_mask & (CWX|CWY)) && !(ev->value_mask & (CWWidth|CWHeight)))
 				configure(c);
-			if (ISVISIBLE(c))
+			if (VISIBLE(c))
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 		} else
 			configure(c);
@@ -564,7 +562,7 @@ createmon(void)
 	Monitor *m;
 
 	m = scalloc(1, sizeof(Monitor));
-	m->tagset[0] = m->tagset[1] = 1;
+	m->tags = 1;
 	m->mfact = mfact;
 	m->nmaster = nmaster;
 	m->showbar = showbar;
@@ -600,7 +598,7 @@ detachstack(Client *c)
 	*tc = c->snext;
 
 	if (c == c->mon->sel) {
-		for (t = c->mon->stack; t && !ISVISIBLE(t); t = t->snext);
+		for (t = c->mon->stack; t && !VISIBLE(t); t = t->snext);
 		c->mon->sel = t;
 	}
 }
@@ -647,7 +645,7 @@ drawbar(Monitor *m)
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(tags[i]);
-		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
+		drw_setscheme(drw, scheme[m->tags & 1 << i ? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
@@ -711,8 +709,8 @@ expose(XEvent *e)
 void
 focus(Client *c)
 {
-	if (!c || !ISVISIBLE(c))
-		for (c = selmon->stack; c && !ISVISIBLE(c); c = c->snext);
+	if (!c || !VISIBLE(c))
+		for (c = selmon->stack; c && !VISIBLE(c); c = c->snext);
 	if (selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, 0);
 	if (c) {
@@ -765,16 +763,16 @@ focusstack(const Arg *arg)
 	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen))
 		return;
 	if (arg->i > 0) {
-		for (c = selmon->sel->next; c && !ISVISIBLE(c); c = c->next);
+		for (c = selmon->sel->next; c && !VISIBLE(c); c = c->next);
 		if (!c)
-			for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);
+			for (c = selmon->clients; c && !VISIBLE(c); c = c->next);
 	} else {
 		for (i = selmon->clients; i != selmon->sel; i = i->next)
-			if (ISVISIBLE(i))
+			if (VISIBLE(i))
 				c = i;
 		if (!c)
 			for (; i; i = i->next)
-				if (ISVISIBLE(i))
+				if (VISIBLE(i))
 					c = i;
 	}
 	if (c) {
@@ -964,7 +962,7 @@ manage(Window w, XWindowAttributes *wa)
 		c->tags = t->tags;
 	} else {
 		c->mon = selmon;
-		c->tags = c->mon->tagset[c->mon->seltags];
+		c->tags = c->mon->tags;
 	}
 
 	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
@@ -1108,7 +1106,7 @@ movemouse(const Arg *arg)
 Client *
 nexttiled(Client *c)
 {
-	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->next);
+	for (; c && (c->isfloating || !VISIBLE(c)); c = c->next);
 	return c;
 }
 
@@ -1272,7 +1270,7 @@ restack(Monitor *m)
 	wc.stack_mode = Below;
 	wc.sibling = m->barwin;
 	for (c = m->stack; c; c = c->snext)
-		if (!c->isfloating && ISVISIBLE(c)) {
+		if (!c->isfloating && VISIBLE(c)) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
 		}
@@ -1327,7 +1325,7 @@ sendmon(Client *c, Monitor *m)
 	detach(c);
 	detachstack(c);
 	c->mon = m;
-	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+	c->tags = m->tags; /* assign tags of target monitor */
 	attach(c);
 	attachstack(c);
 	focus(NULL);
@@ -1519,7 +1517,7 @@ showhide(Client *c)
 {
 	if (!c)
 		return;
-	if (ISVISIBLE(c)) {
+	if (VISIBLE(c)) {
 		/* show clients top down */
 		XMoveWindow(dpy, c->win, c->x, c->y);
 		if (c->isfloating && !c->isfullscreen)
@@ -1662,10 +1660,10 @@ toggletag(const Arg *arg)
 void
 toggleview(const Arg *arg)
 {
-	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
+	unsigned int newtagset = selmon->tags ^ (arg->ui & TAGMASK);
 
 	if (newtagset) {
-		selmon->tagset[selmon->seltags] = newtagset;
+		selmon->tags = newtagset;
 		focus(NULL);
 		arrange(selmon);
 	}
@@ -1960,11 +1958,10 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+	if ((arg->ui & TAGMASK) == selmon->tags)
 		return;
-	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK)
-		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+		selmon->tags = arg->ui & TAGMASK;
 	focus(NULL);
 	arrange(selmon);
 }
