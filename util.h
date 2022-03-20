@@ -9,8 +9,8 @@
 #define LENGTH(array) (sizeof(array) / sizeof(array[0]))
 
 #define VISIBLE(client) (client->tags & client->mon->tags)
-#define WIDTH(client) (client->w + 2 * client->bw)
-#define HEIGHT(client) (client->h + 2 * client->bw)
+#define WIDTH(client) (client->w + 2 * borderw)
+#define HEIGHT(client) (client->h + 2 * borderw)
 
 void die(const char *fmt, ...);
 void *scalloc(size_t nmemb, size_t size);

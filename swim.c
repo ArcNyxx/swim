@@ -86,7 +86,6 @@ struct Client {
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
-	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Client *next;
@@ -105,7 +104,6 @@ typedef struct {
 struct Monitor {
 	unsigned int mfact;
 	unsigned int nmaster;
-	int num;
 	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
@@ -266,18 +264,18 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 			*x = sw - WIDTH(c);
 		if (*y > sh)
 			*y = sh - HEIGHT(c);
-		if (*x + *w + 2 * c->bw < 0)
+		if (*x + *w + 2*borderw < 0)
 			*x = 0;
-		if (*y + *h + 2 * c->bw < 0)
+		if (*y + *h + 2*borderw < 0)
 			*y = 0;
 	} else {
 		if (*x >= m->wx + m->ww)
 			*x = m->wx + m->ww - WIDTH(c);
 		if (*y >= m->wy + m->wh)
 			*y = m->wy + m->wh - HEIGHT(c);
-		if (*x + *w + 2 * c->bw <= m->wx)
+		if (*x + *w + 2*borderw <= m->wx)
 			*x = m->wx;
-		if (*y + *h + 2 * c->bw <= m->wy)
+		if (*y + *h + 2*borderw <= m->wy)
 			*y = m->wy;
 	}
 	if (*h < bh)
@@ -470,7 +468,7 @@ configure(Client *c)
 	ce.y = c->y;
 	ce.width = c->w;
 	ce.height = c->h;
-	ce.border_width = c->bw;
+	ce.border_width = borderw;
 	ce.above = None;
 	ce.override_redirect = False;
 	XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce);
@@ -513,9 +511,7 @@ configurerequest(XEvent *e)
 	XWindowChanges wc;
 
 	if ((c = wintoclient(ev->window))) {
-		if (ev->value_mask & CWBorderWidth)
-			c->bw = ev->border_width;
-		else if (c->isfloating) {
+		if (c->isfloating) {
 			m = c->mon;
 			if (ev->value_mask & CWX) {
 				c->oldx = c->x;
@@ -541,7 +537,7 @@ configurerequest(XEvent *e)
 				configure(c);
 			if (VISIBLE(c))
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
-		} else
+		} else if (!(ev->value_mask & CWBorderWidth))
 			configure(c);
 	} else {
 		wc.x = ev->x;
@@ -954,7 +950,6 @@ manage(Window w, XWindowAttributes *wa)
 	c->y = c->oldy = wa->y;
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
-	c->oldbw = wa->border_width;
 
 	updatetitle(c);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
@@ -973,9 +968,8 @@ manage(Window w, XWindowAttributes *wa)
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
-	c->bw = borderpx;
 
-	wc.border_width = c->bw;
+	wc.border_width = borderw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
 	XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColBorder].pixel);
 	configure(c); /* propagates border_width, if size doesn't change */
@@ -1192,7 +1186,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	c->oldy = c->y; c->y = wc.y = y;
 	c->oldw = c->w; c->w = wc.width = w;
 	c->oldh = c->h; c->h = wc.height = h;
-	wc.border_width = c->bw;
+	wc.border_width = c->isfullscreen ? 0 : borderw;
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
@@ -1217,7 +1211,7 @@ resizemouse(const Arg *arg)
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
+	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + borderw - 1, c->h + borderw - 1);
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
@@ -1231,8 +1225,8 @@ resizemouse(const Arg *arg)
 				continue;
 			lasttime = ev.xmotion.time;
 
-			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
-			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
+			nw = MAX(ev.xmotion.x - ocx - 2*borderw + 1, 1);
+			nh = MAX(ev.xmotion.y - ocy - 2*borderw + 1, 1);
 			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
 			{
@@ -1245,7 +1239,7 @@ resizemouse(const Arg *arg)
 			break;
 		}
 	} while (ev.type != ButtonRelease);
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
+	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + borderw - 1, c->h + borderw - 1);
 	XUngrabPointer(dpy, CurrentTime);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
@@ -1386,8 +1380,6 @@ setfullscreen(Client *c, int fullscreen)
 			PropModeReplace, (unsigned char*)&netatom[NetWMFullscreen], 1);
 		c->isfullscreen = 1;
 		c->oldstate = c->isfloating;
-		c->oldbw = c->bw;
-		c->bw = 0;
 		c->isfloating = 1;
 		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh);
 		XRaiseWindow(dpy, c->win);
@@ -1396,7 +1388,6 @@ setfullscreen(Client *c, int fullscreen)
 			PropModeReplace, (unsigned char*)0, 0);
 		c->isfullscreen = 0;
 		c->isfloating = c->oldstate;
-		c->bw = c->oldbw;
 		c->x = c->oldx;
 		c->y = c->oldy;
 		c->w = c->oldw;
@@ -1541,8 +1532,6 @@ sigchld(int unused)
 void
 spawn(const Arg *arg)
 {
-	if (arg->v == dmenucmd)
-		dmenumon[0] = '0' + selmon->num;
 	if (fork() == 0) {
 		if (dpy)
 			close(ConnectionNumber(dpy));
@@ -1595,8 +1584,8 @@ tile(Monitor *mon)
 		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
-				GAPOV*gap, width - 2*client->bw,
-				height - 2*client->bw, 0);
+				GAPOV*gap, width - 2*borderw,
+				height - 2*borderw, 0);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
@@ -1610,9 +1599,9 @@ tile(Monitor *mon)
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
 				mon->wy + totgap + GAPOH*gap,
-				mon->ww - width - 2*client->bw -
+				mon->ww - width - 2*borderw -
 				2*GAPOV*gap - GAPIV*gap,
-				height - 2*client->bw, 0);
+				height - 2*borderw, 0);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
@@ -1689,7 +1678,7 @@ unmanage(Client *c, int destroyed)
 	detach(c);
 	detachstack(c);
 	if (!destroyed) {
-		wc.border_width = c->oldbw;
+		wc.border_width = borderw;
 		XGrabServer(dpy); /* avoid race conditions */
 		XSetErrorHandler(xerrordummy);
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc); /* restore border */
@@ -1803,7 +1792,6 @@ updategeom(void)
 				|| unique[i].width != m->mw || unique[i].height != m->mh)
 				{
 					dirty = 1;
-					m->num = i;
 					m->mx = m->wx = unique[i].x_org;
 					m->my = m->wy = unique[i].y_org;
 					m->mw = m->ww = unique[i].width;
