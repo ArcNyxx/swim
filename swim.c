@@ -109,7 +109,6 @@ struct Monitor {
 	int wx, wy, ww, wh;   /* window area  */
 	unsigned int tags;
 	int showbar;
-	int topbar;
 	Client *clients;
 	Client *sel;
 	Client *stack;
@@ -562,7 +561,6 @@ createmon(void)
 	m->mfact = mfact;
 	m->nmaster = nmaster;
 	m->showbar = showbar;
-	m->topbar = topbar;
 	return m;
 }
 
@@ -1737,8 +1735,10 @@ updatebarpos(Monitor *m)
 	m->wh = m->mh;
 	if (m->showbar) {
 		m->wh -= bh;
-		m->by = m->topbar ? m->wy : m->wy + m->wh;
-		m->wy = m->topbar ? m->wy + bh : m->wy;
+		if (topbar)
+			m->by = m->wy, m->wy += bh;
+		else
+			m->by = m->wy + m->wh;
 	} else
 		m->by = -bh;
 }
