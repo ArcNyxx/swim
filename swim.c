@@ -63,58 +63,7 @@ enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms *
 enum { ClkTagBar, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
 
-typedef union {
-	int i;
-	unsigned int ui;
-	float f;
-	const void *v;
-} Arg;
-
-typedef struct {
-	unsigned int click;
-	unsigned int mask;
-	unsigned int button;
-	void (*func)(const Arg *arg);
-	const Arg arg;
-} Button;
-
-typedef struct Monitor Monitor;
-typedef struct Client Client;
-struct Client {
-	char name[256];
-	float mina, maxa;
-	int x, y, w, h;
-	int oldx, oldy, oldw, oldh;
-	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
-	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
-	Client *next;
-	Client *snext;
-	Monitor *mon;
-	Window win;
-};
-
-typedef struct {
-	unsigned int mod;
-	KeySym keysym;
-	void (*func)(const Arg *);
-	const Arg arg;
-} Key;
-
-struct Monitor {
-	unsigned int mfact;
-	unsigned int nmaster;
-	int by;               /* bar geometry */
-	int mx, my, mw, mh;   /* screen size */
-	int wx, wy, ww, wh;   /* window area  */
-	unsigned int tags;
-	int showbar;
-	Client *clients;
-	Client *sel;
-	Client *stack;
-	Monitor *next;
-	Window barwin;
-};
+#include "struct.h"
 
 /* function declarations */
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -366,7 +315,7 @@ buttonpress(XEvent *e)
 		while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
-			arg.ui = 1 << i;
+			arg.n = 1 << i;
 		} else if (ev->x > selmon->ww - (int)TEXTW(stext))
 			click = ClkStatusText;
 		else
@@ -380,7 +329,7 @@ buttonpress(XEvent *e)
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
 		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
-			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
+			buttons[i].func(click == ClkTagBar && buttons[i].arg.n == 0 ? &arg : &buttons[i].arg);
 }
 
 void
@@ -397,7 +346,7 @@ checkotherwm(void)
 void
 cleanup(void)
 {
-	Arg a = {.ui = ~0};
+	Arg a = { .n = ~0};
 	Monitor *m;
 	size_t i;
 
@@ -742,7 +691,7 @@ focusmon(const Arg *arg)
 
 	if (!mons->next)
 		return;
-	if ((m = dirtomon(arg->i)) == selmon)
+	if ((m = dirtomon(arg->n)) == selmon)
 		return;
 	unfocus(selmon->sel, 0);
 	selmon = m;
@@ -756,7 +705,7 @@ focusstack(const Arg *arg)
 
 	if (!selmon->sel || (selmon->sel->isfullscreen && lockfullscreen))
 		return;
-	if (arg->i > 0) {
+	if (arg->n > 0) {
 		for (c = selmon->sel->next; c && !VISIBLE(c); c = c->next);
 		if (!c)
 			for (c = selmon->clients; c && !VISIBLE(c); c = c->next);
@@ -886,7 +835,7 @@ grabkeys(void)
 void
 incnmaster(const Arg *arg)
 {
-	selmon->nmaster = MAX(selmon->nmaster + arg->i, 1);
+	selmon->nmaster = MAX(selmon->nmaster + arg->n, 1);
 	arrange(selmon);
 }
 
@@ -1410,7 +1359,7 @@ setmfact(const Arg *arg)
 
 	if (!arg)
 		return;
-	newmfact = arg->i > 100 ? arg->i - 100 : selmon->mfact + arg->i;
+	newmfact = arg->n > 100 ? arg->n - 100 : selmon->mfact + arg->n;
 	if (newmfact < 5 || newmfact > 95)
 		return;
 	selmon->mfact = newmfact;
@@ -1544,8 +1493,8 @@ spawn(const Arg *arg)
 void
 tag(const Arg *arg)
 {
-	if (selmon->sel != NULL && (arg->ui & TAGMASK) != 0) {
-		selmon->sel->tags = arg->ui & TAGMASK;
+	if (selmon->sel != NULL && (arg->n & TAGMASK) != 0) {
+		selmon->sel->tags = arg->n & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
 	}
@@ -1556,7 +1505,7 @@ tagmon(const Arg *arg)
 {
 	if (!selmon->sel || !mons->next)
 		return;
-	sendmon(selmon->sel, dirtomon(arg->i));
+	sendmon(selmon->sel, dirtomon(arg->n));
 }
 
 void
@@ -1636,7 +1585,7 @@ toggletag(const Arg *arg)
 		return;
 
 	unsigned int newtags;
-	if ((newtags = selmon->sel->tags ^ (arg->ui & TAGMASK)) != 0) {
+	if ((newtags = selmon->sel->tags ^ (arg->n & TAGMASK)) != 0) {
 		selmon->sel->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
@@ -1647,7 +1596,7 @@ void
 toggleview(const Arg *arg)
 {
 	unsigned int newtags;
-	if ((newtags = selmon->tags ^ (arg->ui & TAGMASK)) != 0) {
+	if ((newtags = selmon->tags ^ (arg->n & TAGMASK)) != 0) {
 		selmon->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
@@ -1944,8 +1893,8 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	if ((arg->ui & TAGMASK) != 0) {
-		selmon->tags = arg->ui & TAGMASK;
+	if ((arg->n & TAGMASK) != 0) {
+		selmon->tags = arg->n & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
 	}
