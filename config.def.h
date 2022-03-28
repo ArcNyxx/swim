@@ -2,24 +2,19 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
-typedef unsigned int uint;
-typedef unsigned int bool;
-
-enum { false, true };
-
 #define GAPIH 12
 #define GAPIV 12
 #define GAPOH 8
 #define GAPOV 8
 
-const uint borderw        = 1;     /* border width of windows */
-const uint mfact          = 50;    /* percentage factor of master area */
-const uint nmaster        = 1;     /* number of clients in master area */
-const uint snap           = 32;    /* mouse functions snap boundary */
-const bool showbar        = true;  /* show status bar */
-const bool topbar         = false; /* status bar on top */
-const bool resizehints    = false; /* enable client resize hints */
-const bool lockfullscreen = true;  /* force focus on fullscreen window */
+const unsigned int borderw = 1;  /* border width of windows */
+const unsigned int mfact   = 50; /* percentage factor of master area */
+const unsigned int nmaster = 1;  /* number of clients in master area */
+const unsigned int snap    = 32; /* mouse functions snap boundary */
+const int showbar          = 1;  /* show status bar */
+const int topbar           = 0;  /* status bar on top */
+const int resizehints      = 0;  /* enable client resize hints */
+const int lockfullscreen   = 1;  /* force focus on fullscreen window */
 
 const char *fonts[]     = { "monospace:size=10" };
 const char *tags[]      = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
