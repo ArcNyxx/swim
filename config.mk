@@ -13,7 +13,7 @@ WPROFILE = -Wall -Wextra -Wstrict-prototypes -Wmissing-declarations \
 -Wwrite-strings -Wno-unused-parameter -Wfloat-equal -Wpedantic
 INC = -I/usr/X11R6/include -I/usr/include/freetype2
 STD = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L -DXINERAMA
-LIB = -L/usr/X11R6/lib -lX11 -lXinerama -lfontconfig -lXft
+LIB = -L/usr/X11R6/lib -lX11 -lXinerama -lfontconfig -lXft -lxkbcommon
 
 CFLAGS = $(INC) $(STD) -Os
 LDFLAGS = $(LIB)

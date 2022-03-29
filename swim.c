@@ -40,18 +40,20 @@
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
+#include <X11/XKBlib.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "drw.h"
 #include "util.h"
 
 /* macros */
-#define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
-#define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
+#define BUTTONMASK	      (ButtonPressMask|ButtonReleaseMask)
+#define CLEANMASK(mask)	 (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
-                               * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+			       * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
+#define MOUSEMASK	       (BUTTONMASK|PointerMotionMask)
+#define TAGMASK		 ((1 << LENGTH(tags)) - 1)
+#define TEXTW(X)		(drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -128,6 +130,7 @@ static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
+static void startexec(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -159,11 +162,13 @@ static void zoom(const Arg *arg);
 /* variables */
 static const char broken[] = "broken";
 static char stext[256];
+static int exec = -1;
+static char exec_arr[256] = { 0 };
 static int screen;
-static int sw, sh;           /* X display screen geometry width, height */
-static int bh;               /* bar geometry */
-static int gap = 1;          /* enables gaps, used by togglegaps */
-static int lrpad;            /* sum of left and right padding for text */
+static int sw, sh;	   /* X display screen geometry width, height */
+static int bh;	       /* bar geometry */
+static int gap = 1;	  /* enables gaps, used by togglegaps */
+static int lrpad;	    /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -598,9 +603,13 @@ drawbar(Monitor *m)
 	}
 
 	if ((w = m->ww - tw - x) > bh) {
-		if (m->sel) {
+		if (exec != -1) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+			drw_text(drw, x, 0, w, bh, lrpad / 2, exec_arr, 0);
+		} else if (m->sel) {
+			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
+			if (exec == -1)
+				drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
 		} else {
@@ -852,19 +861,50 @@ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 #endif /* XINERAMA */
 
 void
-keypress(XEvent *e)
+keypress(XEvent *evt)
 {
-	unsigned int i;
-	KeySym keysym;
-	XKeyEvent *ev;
+#define EXEC_ENTER XK_Return
+#define EXEC_ESCAPE XK_Escape
+#define EXEC_ARG_DELIM "  "
+#define EXEC_MAX_ARGS 16
+	int tmp = 0;
+	KeySym keysym = XkbKeycodeToKeysym(dpy, (KeyCode)evt->xkey.keycode, 0, 0);
+	for (unsigned int i = 0; i < LENGTH(keys); ++i)
+		if (keysym == keys[i].keysym && CLEANMASK(keys[i].mod) ==
+				CLEANMASK(evt->xkey.state) && keys[i].func != NULL) {
+			tmp = 1;
+			keys[i].func(&keys[i].arg);
+		}
 
-	ev = &e->xkey;
-	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-	for (i = 0; i < LENGTH(keys); i++)
-		if (keysym == keys[i].keysym
-		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
-		&& keys[i].func)
-			keys[i].func(&(keys[i].arg));
+	if (exec != (size_t)-1 && tmp == 0) {
+		/* preserve uppercase keysym information */
+		keysym = XkbKeycodeToKeysym(dpy, evt->xkey.keycode, 0,
+				((evt->xkey.state & ShiftMask) != 0));
+
+		switch (keysym) {
+		case EXEC_ENTER:
+			char *ptrs[EXEC_MAX_ARGS] = { exec_arr };
+			char **pos = ptrs;
+			for (size_t i = 0; i < exec; ++i)
+				/* if delim found, set character to null, inc pos, add delim len to i */
+				if (!strncmp(&exec_arr[i], EXEC_ARG_DELIM, strlen(EXEC_ARG_DELIM))) {
+					exec_arr[i] = '\0';
+					*(pos += sizeof(void *)) = &exec_arr[i += strlen(EXEC_ARG_DELIM)];
+				}
+
+			Arg arg = { .v = pos };
+			spawn(&arg);
+		case EXEC_ESCAPE: /* FALLTHROUGH */
+			exec = -1; /* quit exec on both enter and escape */
+			memset(exec_arr, 0, sizeof(exec_arr));
+			grabkeys();
+			break;
+		default:
+			exec += xkb_keysym_to_utf8(keysym, exec_arr + exec,
+					sizeof(exec_arr) - exec) - 1;
+		}
+		drawbars();
+	}
 }
 
 void
@@ -1488,6 +1528,14 @@ spawn(const Arg *arg)
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
+}
+
+void
+startexec(const Arg *arg)
+{
+	exec = 0;
+	/* no clue hope this works lol */
+	XGrabKey(dpy, AnyKey, AnyModifier, root, True, GrabModeAsync, GrabModeAsync);
 }
 
 void

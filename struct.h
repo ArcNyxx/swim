@@ -1,3 +1,7 @@
+/* swim - simple window manager
+ * Copyright (C) 2022 ArcNyxx
+ * see LICENCE file for licensing information */
+
 typedef union  arg     Arg;
 
 typedef struct button  Button;
