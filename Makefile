@@ -7,7 +7,7 @@
 include config.mk
 
 SRC = drw.c swim.c util.c
-HEAD = drw.h util.h
+HEAD = drw.h struct.h util.h
 OBJ = $(SRC:.c=.o)
 
 all: swim
@@ -50,7 +50,7 @@ install: all
 	cp -f swim $(DESTDIR)$(PREFIX)/bin
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/swim
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
-	cat swim.1 | sed "s/VERSION/$(VERSION)/g" > \
+	sed "s/VERSION/$(VERSION)/g" < swim.1 > \
 		$(DESTDIR)$(MANPREFIX)/man1/swim.1
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/swim.1
 

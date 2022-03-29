@@ -9,8 +9,15 @@
 #define LENGTH(array) (sizeof(array) / sizeof(array[0]))
 
 #define VISIBLE(client) (client->tags & client->mon->tags)
-#define WIDTH(client) (client->w + 2 * borderw)
-#define HEIGHT(client) (client->h + 2 * borderw)
+#define WIDTH(client)   (client->w + 2 * borderw)
+#define HEIGHT(client)  (client->h + 2 * borderw)
+
+#define BUTTON (ButtonPressMask | ButtonReleaseMask)
+#define MOUSE  (BUTTON | PointerMotionMask)
+#define TAG    ((1 << LENGTH(tags)) - 1)
+
+#define CLEAN(mask) (mask & ~(numlockmask | LockMask) & (ShiftMask | \
+	ControlMask | Mod1Mask | Mod2Mask | Mod3Mask | Mod4Mask | Mod5Mask))
 
 void die(const char *fmt, ...);
 void *scalloc(size_t nmemb, size_t size);

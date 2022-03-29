@@ -46,15 +46,6 @@
 #include "drw.h"
 #include "util.h"
 
-/* macros */
-#define BUTTONMASK	      (ButtonPressMask|ButtonReleaseMask)
-#define CLEANMASK(mask)	 (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
-#define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
-			       * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define MOUSEMASK	       (BUTTONMASK|PointerMotionMask)
-#define TAGMASK		 ((1 << LENGTH(tags)) - 1)
-#define TEXTW(X)		(drw_fontset_getwidth(drw, (X)) + lrpad)
-
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
@@ -316,12 +307,12 @@ buttonpress(XEvent *e)
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
 		do
-			x += TEXTW(tags[i]);
+			x += drw_fontset_getwidth(drw, tags[i]) + lrpad;
 		while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
 			arg.n = 1 << i;
-		} else if (ev->x > selmon->ww - (int)TEXTW(stext))
+		} else if (ev->x > selmon->ww - (int)drw_fontset_getwidth(drw, stext) + lrpad)
 			click = ClkStatusText;
 		else
 			click = ClkWinTitle;
@@ -333,7 +324,7 @@ buttonpress(XEvent *e)
 	}
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
-		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
+		&& CLEAN(buttons[i].mask) == CLEAN(ev->state))
 			buttons[i].func(click == ClkTagBar && buttons[i].arg.n == 0 ? &arg : &buttons[i].arg);
 }
 
@@ -581,7 +572,7 @@ drawbar(Monitor *m)
 	/* draw status first so it can be overdrawn by tags later */
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[SchemeNorm]);
-		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
+		tw = drw_fontset_getwidth(drw, stext) + 2; /* 2px right padding */
 		drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
 	}
 
@@ -592,7 +583,7 @@ drawbar(Monitor *m)
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(tags[i]);
+		w = drw_fontset_getwidth(drw, tags[i]) + lrpad;
 		drw_setscheme(drw, scheme[m->tags & 1 << i ? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
@@ -812,13 +803,13 @@ grabbuttons(Client *c, int focused)
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 		if (!focused)
 			XGrabButton(dpy, AnyButton, AnyModifier, c->win, False,
-				BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
+				BUTTON, GrabModeSync, GrabModeSync, None, None);
 		for (i = 0; i < LENGTH(buttons); i++)
 			if (buttons[i].click == ClkClientWin)
 				for (j = 0; j < LENGTH(modifiers); j++)
 					XGrabButton(dpy, buttons[i].button,
 						buttons[i].mask | modifiers[j],
-						c->win, False, BUTTONMASK,
+						c->win, False, BUTTON,
 						GrabModeAsync, GrabModeSync, None, None);
 	}
 }
@@ -870,8 +861,8 @@ keypress(XEvent *evt)
 	int tmp = 0;
 	KeySym keysym = XkbKeycodeToKeysym(dpy, (KeyCode)evt->xkey.keycode, 0, 0);
 	for (unsigned int i = 0; i < LENGTH(keys); ++i)
-		if (keysym == keys[i].keysym && CLEANMASK(keys[i].mod) ==
-				CLEANMASK(evt->xkey.state) && keys[i].func != NULL) {
+		if (keysym == keys[i].keysym && CLEAN(keys[i].mod) ==
+				CLEAN(evt->xkey.state) && keys[i].func != NULL) {
 			tmp = 1;
 			keys[i].func(&keys[i].arg);
 		}
@@ -1040,13 +1031,13 @@ movemouse(const Arg *arg)
 	restack(selmon);
 	ocx = c->x;
 	ocy = c->y;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+	if (XGrabPointer(dpy, root, False, MOUSE, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
 		return;
 	if (!getrootptr(&x, &y))
 		return;
 	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		XMaskEvent(dpy, MOUSE|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
@@ -1150,7 +1141,8 @@ recttomon(int x, int y, int w, int h)
 	int a, area = 0;
 
 	for (m = mons; m; m = m->next)
-		if ((a = INTERSECT(x, y, w, h, m)) > area) {
+		if (MAX(0, MIN(x + w, m->wx + m->ww) - MAX(x, m->wx)) *
+				MAX(0, MIN(y + h, m->wy + m->wh) - MAX(y, m->wy))) {
 			area = a;
 			r = m;
 		}
@@ -1195,12 +1187,12 @@ resizemouse(const Arg *arg)
 	restack(selmon);
 	ocx = c->x;
 	ocy = c->y;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+	if (XGrabPointer(dpy, root, False, MOUSE, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + borderw - 1, c->h + borderw - 1);
 	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		XMaskEvent(dpy, MOUSE|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
@@ -1541,8 +1533,8 @@ startexec(const Arg *arg)
 void
 tag(const Arg *arg)
 {
-	if (selmon->sel != NULL && (arg->n & TAGMASK) != 0) {
-		selmon->sel->tags = arg->n & TAGMASK;
+	if (selmon->sel != NULL && (arg->n & TAG) != 0) {
+		selmon->sel->tags = arg->n & TAG;
 		focus(NULL);
 		arrange(selmon);
 	}
@@ -1633,7 +1625,7 @@ toggletag(const Arg *arg)
 		return;
 
 	unsigned int newtags;
-	if ((newtags = selmon->sel->tags ^ (arg->n & TAGMASK)) != 0) {
+	if ((newtags = selmon->sel->tags ^ (arg->n & TAG)) != 0) {
 		selmon->sel->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
@@ -1644,7 +1636,7 @@ void
 toggleview(const Arg *arg)
 {
 	unsigned int newtags;
-	if ((newtags = selmon->tags ^ (arg->n & TAGMASK)) != 0) {
+	if ((newtags = selmon->tags ^ (arg->n & TAG)) != 0) {
 		selmon->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
@@ -1941,8 +1933,8 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	if ((arg->n & TAGMASK) != 0) {
-		selmon->tags = arg->n & TAGMASK;
+	if ((arg->n & TAG) != 0) {
+		selmon->tags = arg->n & TAG;
 		focus(NULL);
 		arrange(selmon);
 	}
