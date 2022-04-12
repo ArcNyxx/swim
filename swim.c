@@ -852,55 +852,46 @@ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 void
 keypress(XEvent *evt)
 {
-#define EXEC_ENTER XK_Return
-#define EXEC_ESCAPE XK_Escape
-#define EXEC_ARG_DELIM "  "
-#define EXEC_MAX_ARGS 16
-	int tmp = 0;
-	KeySym keysym = XkbKeycodeToKeysym(dpy, (KeyCode)evt->xkey.keycode, 0, 0);
-	for (unsigned int i = 0; i < LENGTH(keys); ++i)
-		if (keysym == keys[i].keysym && CLEAN(keys[i].mod) ==
-				CLEAN(evt->xkey.state) && keys[i].func != NULL) {
-			tmp = 1;
+	char hotkey = 0;
+	KeySym keysym = XkbKeycodeToKeysym(dpy,
+			(KeyCode)evt->xkey.keycode, 0, 0);
+	for (size_t i = 0; i < LENGTH(keys); ++i)
+		if (keysym == keys[i].keysym && keys[i].func != NULL &&
+				CLEAN(keys[i].mod) == CLEAN(evt->xkey.state)) {
 			keys[i].func(&keys[i].arg);
+			hotkey = 1;
 		}
 
-	if (exec != (size_t)-1 && tmp == 0) {
-		/* preserve uppercase keysym information */
-		keysym = XkbKeycodeToKeysym(dpy, evt->xkey.keycode, 0,
-				((evt->xkey.state & ShiftMask) != 0));
+	if (hotkey || exec == (size_t)-1)
+		return;
 
-		switch (keysym) {
-		case XK_BackSpace:
-			size_t i = 1;
-			for (; exec - i > 0 && (exec_arr[exec - i] & 0xc0)
-					== 0x80; --i);
-			exec -= i;
-			exec_arr[exec] = '\0';
-			break;
-		case EXEC_ENTER:
-			char *ptrs[EXEC_MAX_ARGS] = { exec_arr };
-			char **pos = ptrs;
-			for (size_t i = 0; i < exec; ++i)
-				/* if delim found, set character to null, inc pos, add delim len to i */
-				if (!strncmp(&exec_arr[i], EXEC_ARG_DELIM, strlen(EXEC_ARG_DELIM))) {
-					exec_arr[i] = '\0';
-					*(pos += sizeof(void *)) = &exec_arr[i += strlen(EXEC_ARG_DELIM)];
-				}
-
-			Arg arg = { .v = pos };
-			spawn(&arg);
-		case EXEC_ESCAPE: /* FALLTHROUGH */
-			exec = -1; /* quit exec on both enter and escape */
-			memset(exec_arr, 0, sizeof(exec_arr));
-			grabkeys();
-			break;
-		default:
-			exec += xkb_keysym_to_utf8(keysym, exec_arr + exec,
-					sizeof(exec_arr) - exec) - 1;
-		}
-		drawbar(selmon);
+	/* preserve uppercase keysym information */
+	keysym = XkbKeycodeToKeysym(dpy, evt->xkey.keycode, 0,
+			(evt->xkey.state & ShiftMask) != 0);
+	switch (keysym) {
+	case XK_Return:
+		char *ptrs[8] = { 0 }; ptrs[0] = exec_arr;
+		for (size_t i = 0, j = 1; i < exec; ++i)
+			if (exec_arr[i] == ' ') {
+				exec_arr[i] = '\0';
+				ptrs[j++] = &exec_arr[i + 1];
+			}
+		Arg arg = { .v = ptrs };
+		spawn(&arg);
+	case XK_Escape: /* FALLTHROUGH */
+		exec = -1, exec_arr[0] = '\0';
+		grabkeys();
+		break;
+	case XK_BackSpace:
+		size_t i = 0;
+		while (exec - i > 0 && (exec_arr[exec - ++i] & 0xc0) ==0x80);
+		exec_arr[(exec -= i)] = '\0';
+		break;
+	default:
+		exec += xkb_keysym_to_utf8(keysym, &exec_arr[exec],
+				sizeof(exec_arr) - exec) - 1;
 	}
+	drawbar(selmon);
 }
 
 void
