@@ -871,6 +871,13 @@ keypress(XEvent *evt)
 				((evt->xkey.state & ShiftMask) != 0));
 
 		switch (keysym) {
+		case XK_BackSpace:
+			size_t i = 1;
+			for (; exec - i > 0 && (exec_arr[exec - i] & 0xc0)
+					== 0x80; --i);
+			exec -= i;
+			exec_arr[exec] = '\0';
+			break;
 		case EXEC_ENTER:
 			char *ptrs[EXEC_MAX_ARGS] = { exec_arr };
 			char **pos = ptrs;
@@ -892,7 +899,7 @@ keypress(XEvent *evt)
 			exec += xkb_keysym_to_utf8(keysym, exec_arr + exec,
 					sizeof(exec_arr) - exec) - 1;
 		}
-		drawbars();
+		drawbar(selmon);
 	}
 }
 

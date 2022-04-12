@@ -61,7 +61,6 @@ const Key keys[] = {
 	{ MODKEY | ShiftMask, keysym, tag, { .n = 1 << shift } }, \
 	{ MODKEY | ControlMask | ShiftMask, keysym, toggletag, \
 		{ .n = 1 << shift } }
-	
 	TAGKEY(XK_1, 0),
 	TAGKEY(XK_2, 1),
 	TAGKEY(XK_3, 2),
@@ -71,7 +70,6 @@ const Key keys[] = {
 	TAGKEY(XK_7, 6),
 	TAGKEY(XK_8, 7),
 	TAGKEY(XK_9, 8),
-
 #undef TAGKEY
 
 	{ MODKEY, XK_0, view, { .n = ~0 } },
