@@ -148,7 +148,6 @@ static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
 /* variables */
-static const char broken[] = "broken";
 static char stext[256];
 static int exec = -1;
 static char exec_arr[256] = { 0 };
@@ -157,22 +156,6 @@ static int sw, sh;	   /* X display screen geometry width, height */
 static int gap = 1;	  /* enables gaps, used by togglegaps */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
-static void (*handler[LASTEvent]) (XEvent *) = {
-	[ButtonPress] = buttonpress,
-	[ClientMessage] = clientmessage,
-	[ConfigureRequest] = configurerequest,
-	[ConfigureNotify] = configurenotify,
-	[DestroyNotify] = destroynotify,
-	[EnterNotify] = enternotify,
-	[Expose] = expose,
-	[FocusIn] = focusin,
-	[KeyPress] = keypress,
-	[MappingNotify] = mappingnotify,
-	[MapRequest] = maprequest,
-	[MotionNotify] = motionnotify,
-	[PropertyNotify] = propertynotify,
-	[UnmapNotify] = unmapnotify
-};
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
 static Cur *cursor[CurLast];
@@ -1008,9 +991,13 @@ movemouse(const Arg *arg)
 		XMaskEvent(dpy, MOUSE|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
+			configurerequest(&ev);
+			break;
 		case Expose:
+			expose(&ev);
+			break;
 		case MapRequest:
-			handler[ev.type](&ev);
+			maprequest(&ev);
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -1163,9 +1150,13 @@ resizemouse(const Arg *arg)
 		XMaskEvent(dpy, MOUSE|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
+			configurerequest(&ev);
+			break;
 		case Expose:
+			expose(&ev);
+			break;
 		case MapRequest:
-			handler[ev.type](&ev);
+			maprequest(&ev);
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -1754,8 +1745,6 @@ updatetitle(Client *c)
 {
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
 		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
-	if (c->name[0] == '\0') /* hack to mark broken clients */
-		strcpy(c->name, broken);
 }
 
 void
@@ -1993,6 +1982,22 @@ scanps:
 	XSync(dpy, false);
 
 	XEvent evt;
+	void (*handler[LASTEvent])(XEvent *) = {
+		[ButtonPress] = buttonpress,
+		[ClientMessage] = clientmessage,
+		[ConfigureRequest] = configurerequest,
+		[ConfigureNotify] = configurenotify,
+		[DestroyNotify] = destroynotify,
+		[EnterNotify] = enternotify,
+		[Expose] = expose,
+		[FocusIn] = focusin,
+		[KeyPress] = keypress,
+		[MappingNotify] = mappingnotify,
+		[MapRequest] = maprequest,
+		[MotionNotify] = motionnotify,
+		[PropertyNotify] = propertynotify,
+		[UnmapNotify] = unmapnotify
+	};
 	while (running && XNextEvent(dpy, &evt) == 0)
 		if (handler[evt.type])
 			handler[evt.type](&evt);
