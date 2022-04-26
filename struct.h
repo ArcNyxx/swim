@@ -2,6 +2,8 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+typedef unsigned int   uint;
+
 typedef union  arg     Arg;
 
 typedef struct button  Button;
