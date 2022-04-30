@@ -46,6 +46,7 @@
 
 #include "drw.h"
 #include "util.h"
+#include "xerr.h"
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -62,10 +63,7 @@ enum { ClkTagBar, ClkStatusText, ClkWinTitle,
 /* function declarations */
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 static void arrange(Monitor *m);
-static void attach(Client *c);
-static void attachstack(Client *c);
 static void buttonpress(XEvent *e);
-static void checkotherwm(void);
 static void cleanupmon(Monitor *mon);
 static void clientmessage(XEvent *e);
 static void configure(Client *c);
@@ -135,16 +133,12 @@ static void updateclientlist(void);
 static int updategeom(void);
 static void updatenumlockmask(void);
 static void updatesizehints(Client *c);
-static void updatestatus(void);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
-static int xerror(Display *dpy, XErrorEvent *ee);
-static int xerrordummy(Display *dpy, XErrorEvent *ee);
-static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
 /* variables */
@@ -154,7 +148,6 @@ static char exec_arr[256] = { 0 };
 static int screen;
 static int sw, sh;	   /* X display screen geometry width, height */
 static int gap = 1;	  /* enables gaps, used by togglegaps */
-static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
@@ -253,20 +246,6 @@ arrange(Monitor *m)
 }
 
 void
-attach(Client *c)
-{
-	c->next = c->mon->clients;
-	c->mon->clients = c;
-}
-
-void
-attachstack(Client *c)
-{
-	c->snext = c->mon->stack;
-	c->mon->stack = c;
-}
-
-void
 buttonpress(XEvent *e)
 {
 	unsigned int i, x, click;
@@ -304,17 +283,6 @@ buttonpress(XEvent *e)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
 		&& CLEAN(buttons[i].mask) == CLEAN(ev->state))
 			buttons[i].func(click == ClkTagBar && buttons[i].arg.n == 0 ? &arg : &buttons[i].arg);
-}
-
-void
-checkotherwm(void)
-{
-	xerrorxlib = XSetErrorHandler(xerrorstart);
-	/* this causes an error if some other window manager is running */
-	XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
-	XSync(dpy, false);
-	XSetErrorHandler(xerror);
-	XSync(dpy, false);
 }
 
 void
@@ -615,7 +583,7 @@ focus(Client *c)
 		if (c->isurgent)
 			seturgent(c, 0);
 		detachstack(c);
-		attachstack(c);
+	c->snext = c->mon->stack; c->mon->stack = c;
 		grabbuttons(c, 1);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
@@ -856,7 +824,7 @@ killclient(const Arg *arg)
 		return;
 	if (!sendevent(selmon->sel, wmatom[WMDelete])) {
 		XGrabServer(dpy);
-		XSetErrorHandler(xerrordummy);
+		XSetErrorHandler(xetemp);
 		XSetCloseDownMode(dpy, DestroyAll);
 		XKillClient(dpy, selmon->sel->win);
 		XSync(dpy, false);
@@ -911,8 +879,8 @@ manage(Window w, XWindowAttributes *wa)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
-	attach(c);
-	attachstack(c);
+	c->next = c->mon->clients; c->mon->clients = c;
+	c->snext = c->mon->stack; c->mon->stack = c;
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -1041,7 +1009,7 @@ void
 pop(Client *c)
 {
 	detach(c);
-	attach(c);
+	c->next = c->mon->clients; c->mon->clients = c;
 	focus(c);
 	arrange(c->mon);
 }
@@ -1053,11 +1021,11 @@ propertynotify(XEvent *e)
 	Window trans;
 	XPropertyEvent *ev = &e->xproperty;
 
-	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
-		updatestatus();
-	else if (ev->state == PropertyDelete)
-		return; /* ignore */
-	else if ((c = wintoclient(ev->window))) {
+	if ((ev->window == root) && (ev->atom == XA_WM_NAME)) {
+		if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
+			strcpy(stext, "dwm");
+		drawbar(selmon);
+	} else if (ev->state != PropertyDelete && (c = wintoclient(ev->window))) {
 		switch(ev->atom) {
 		default: break;
 		case XA_WM_TRANSIENT_FOR:
@@ -1220,8 +1188,8 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	c->mon = m;
 	c->tags = m->tags; /* assign tags of target monitor */
-	attach(c);
-	attachstack(c);
+	c->next = c->mon->clients; c->mon->clients = c;
+	c->snext = c->mon->stack; c->mon->stack = c;
 	focus(NULL);
 	arrange(NULL);
 }
@@ -1517,7 +1485,7 @@ unmanage(Client *c, int destroyed)
 	if (!destroyed) {
 		wc.border_width = borderw;
 		XGrabServer(dpy); /* avoid race conditions */
-		XSetErrorHandler(xerrordummy);
+		XSetErrorHandler(xetemp);
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc); /* restore border */
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 		setclientstate(c, WithdrawnState);
@@ -1645,8 +1613,8 @@ updategeom(void)
 					m->clients = c->next;
 					detachstack(c);
 					c->mon = mons;
-					attach(c);
-					attachstack(c);
+					c->next = c->mon->clients; c->mon->clients = c;
+	c->snext = c->mon->stack; c->mon->stack = c;
 				}
 				if (m == selmon)
 					selmon = mons;
@@ -1733,14 +1701,6 @@ updatesizehints(Client *c)
 }
 
 void
-updatestatus(void)
-{
-	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "dwm");
-	drawbar(selmon);
-}
-
-void
 updatetitle(Client *c)
 {
 	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
@@ -1818,42 +1778,6 @@ wintomon(Window w)
 	return selmon;
 }
 
-/* There's no way to check accesses to destroyed windows, thus those cases are
- * ignored (especially on UnmapNotify's). Other types of errors call Xlibs
- * default error handler, which may call exit. */
-int
-xerror(Display *dpy, XErrorEvent *ee)
-{
-	if (ee->error_code == BadWindow
-	|| (ee->request_code == X_SetInputFocus && ee->error_code == BadMatch)
-	|| (ee->request_code == X_PolyText8 && ee->error_code == BadDrawable)
-	|| (ee->request_code == X_PolyFillRectangle && ee->error_code == BadDrawable)
-	|| (ee->request_code == X_PolySegment && ee->error_code == BadDrawable)
-	|| (ee->request_code == X_ConfigureWindow && ee->error_code == BadMatch)
-	|| (ee->request_code == X_GrabButton && ee->error_code == BadAccess)
-	|| (ee->request_code == X_GrabKey && ee->error_code == BadAccess)
-	|| (ee->request_code == X_CopyArea && ee->error_code == BadDrawable))
-		return 0;
-	fprintf(stderr, "dwm: fatal error: request code=%d, error code=%d\n",
-		ee->request_code, ee->error_code);
-	return xerrorxlib(dpy, ee); /* may call exit */
-}
-
-int
-xerrordummy(Display *dpy, XErrorEvent *ee)
-{
-	return 0;
-}
-
-/* Startup Error handler to check if another window manager
- * is already running. */
-int
-xerrorstart(Display *dpy, XErrorEvent *ee)
-{
-	die("dwm: another window manager is already running");
-	return -1;
-}
-
 void
 zoom(const Arg *arg)
 {
@@ -1875,11 +1799,8 @@ main(int argc, char **argv)
 
 	if ((dpy = XOpenDisplay(NULL)) == NULL)
 		die("swim: unable to open display\n");
-	xerrorxlib = XSetErrorHandler(xerrorstart);
-	XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
-	XSync(dpy, false);
-	XSetErrorHandler(xerror);
-	XSync(dpy, false);
+
+	chkwm(dpy);
 
 	sigchld(0); /* reap zombies */
 
@@ -1923,7 +1844,9 @@ main(int argc, char **argv)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 
 	updatebars();
-	updatestatus();
+	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
+		strcpy(stext, "dwm");
+	drawbars();
 
 	Window wmcheckwin = XCreateSimpleWindow(dpy, root,
 			0, 0, 1, 1, 0, 0, 0);
