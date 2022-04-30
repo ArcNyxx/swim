@@ -158,7 +158,7 @@ static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
-static Cur *cursor[CurLast];
+static Cursor cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
@@ -983,7 +983,7 @@ movemouse(const Arg *arg)
 	ocx = c->x;
 	ocy = c->y;
 	if (XGrabPointer(dpy, root, false, MOUSE, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
+		None, cursor[CurMove], CurrentTime) != GrabSuccess)
 		return;
 	if (!getrootptr(&x, &y))
 		return;
@@ -1143,7 +1143,7 @@ resizemouse(const Arg *arg)
 	ocx = c->x;
 	ocy = c->y;
 	if (XGrabPointer(dpy, root, false, MOUSE, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
+		None, cursor[CurResize], CurrentTime) != GrabSuccess)
 		return;
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + borderw - 1, c->h + borderw - 1);
 	do {
@@ -1561,7 +1561,7 @@ updatebars(void)
 		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, (drw->fonts->h + 2), 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
+		XDefineCursor(dpy, m->barwin, cursor[CurNormal]);
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
 	}
@@ -1914,9 +1914,9 @@ main(int argc, char **argv)
 			"_NET_WM_WINDOW_TYPE_DIALOG", false);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", false);
 
-	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
-	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
-	cursor[CurMove] = drw_cur_create(drw, XC_fleur);
+	cursor[CurNormal] = XCreateFontCursor(dpy, XC_left_ptr);
+	cursor[CurResize] = XCreateFontCursor(dpy, XC_sizing);
+	cursor[CurMove]   = XCreateFontCursor(dpy, XC_fleur);
 
 	scheme = scalloc(LENGTH(colors), sizeof(Clr *));
 	for (size_t i = 0; i < LENGTH(colors); i++)
@@ -1940,7 +1940,7 @@ main(int argc, char **argv)
 	
 	/* select events */
 	XSetWindowAttributes sattrs = {
-		.cursor = cursor[CurNormal]->cursor,
+		.cursor = cursor[CurNormal],
 		.event_mask = ButtonPressMask | EnterWindowMask |
 				LeaveWindowMask | PointerMotionMask |
 				PropertyChangeMask | StructureNotifyMask |
@@ -2013,8 +2013,8 @@ scanps:
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
 	while (mons)
 		cleanupmon(mons);
-	for (iter = 0; iter < CurLast; iter++)
-		drw_cur_free(drw, cursor[iter]);
+	for (size_t i = 0; i < LENGTH(cursor); ++i)
+		XFreeCursor(dpy, cursor[i]);
 	for (iter = 0; iter < LENGTH(colors); iter++)
 		free(scheme[iter]);
 	XDestroyWindow(dpy, wmcheckwin);

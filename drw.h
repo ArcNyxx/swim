@@ -1,9 +1,5 @@
 /* See LICENSE file for copyright and license details. */
 
-typedef struct {
-	Cursor cursor;
-} Cur;
-
 typedef struct Fnt {
 	Display *dpy;
 	unsigned int h;
@@ -40,10 +36,6 @@ void drw_font_getexts(Fnt *font, const char *text, unsigned int len, unsigned in
 /* Colorscheme abstraction */
 void drw_clr_create(Drw *drw, Clr *dest, const char *clrname);
 Clr *drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount);
-
-/* Cursor abstraction */
-Cur *drw_cur_create(Drw *drw, int shape);
-void drw_cur_free(Drw *drw, Cur *cursor);
 
 /* Drawing context manipulation */
 void drw_setfontset(Drw *drw, Fnt *set);
