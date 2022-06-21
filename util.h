@@ -2,6 +2,11 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#ifndef UTIL_H
+#define UTIL_H
+
+#include <stddef.h>
+
 #define MAX(num1, num2) ((num1) > (num2) ? (num1) : (num2))
 #define MIN(num1, num2) ((num1) < (num2) ? (num1) : (num2))
 #define BET(mid, low, high) ((mid) >= (low) && (mid) <= (high))
@@ -22,3 +27,5 @@
 void die(const char *fmt, ...);
 void *scalloc(size_t nmemb, size_t size);
 void *srealloc(void *ptr, size_t size);
+
+#endif /* UTIL_H */

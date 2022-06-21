@@ -10,9 +10,9 @@
 
 #include "util.h"
 
-static int (*xeorig)(Display *, XErrorEvent *);
-
 static int xchkwm(Display *dpy, XErrorEvent *evt);
+
+static int (*xeorig)(Display *, XErrorEvent *);
 
 static int
 xchkwm(Display *dpy, XErrorEvent *evt)
@@ -35,23 +35,27 @@ xerror(Display *dpy, XErrorEvent *evt)
 	switch (evt->error_code) {
 	default: break;
 	case BadMatch:
-		if (evt->request_code != X_ConfigureWindow &&
-				evt->request_code != X_SetInputFocus)
-			break;
-		return 0;
+		if (evt->request_code == X_ConfigureWindow ||
+				evt->request_code == X_SetInputFocus)
+			return 0;
+		break;
 	case BadDrawable:
-		if (evt->request_code != X_CopyArea &&
-				evt->request_code != X_PolyFillRectangle &&
-				evt->request_code != X_PolySegment &&
-				evt->request_code != X_PolyText8)
-			break;
-		return 0;
+		if (evt->request_code == X_CopyArea ||
+				evt->request_code == X_PolyFillRectangle ||
+				evt->request_code == X_PolySegment ||
+				evt->request_code == X_PolyText8)
+			return 0;
+		break;
 	case BadAccess:
-		if (evt->request_code != X_GrabButton &&
-				evt->request_code != X_GrabKey)
-			break;
-		return 0;
-	case BadWindow:   /* unable to check destroyed window access, */
+		if (evt->request_code == X_GrabButton ||
+				evt->request_code == X_GrabKey)
+			return 0;
+		break;
+	case BadValue:
+		if (evt->request_code == X_KillClient)
+			return 0;
+		break;
+	case BadWindow: /* unable to check destroyed window access, */
 		return 0; /* ignored especially on unmapnotify */
 	}
 
