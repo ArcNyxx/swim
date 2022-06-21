@@ -3,9 +3,13 @@
 #include "evt.h"
 #include "struct.h"
 
+extern Monitor *selmon, *mons;
+
 void
 buttonpress(XEvent *e)
 {
+	extern Button buttons[4];
+
 	unsigned int i, x, click;
 	Arg arg = {-1};
 	Client *c;
@@ -192,6 +196,8 @@ focusin(XEvent *e)
 void
 keypress(XEvent *evt)
 {
+	extern Key keys[60];
+
 	char hotkey = 0;
 	KeySym keysym = XkbKeycodeToKeysym(dpy,
 			(KeyCode)evt->xkey.keycode, 0, 0);

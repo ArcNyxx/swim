@@ -56,7 +56,6 @@ static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interac
 static void arrange(Monitor *m);
 static void cleanupmon(Monitor *mon);
 static void configure(Client *c);
-static Monitor *createmon(void);
 static void detach(Client *c);
 static void detachstack(Client *c);
 static void drawbar(Monitor *m);
@@ -87,7 +86,6 @@ static void updatebarpos(Monitor *m);
 static void updatebars(void);
 static void updateclientlist(void);
 static int updategeom(void);
-static void updatenumlockmask(void);
 static void updatesizehints(Client *c);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
@@ -100,7 +98,6 @@ static char exec_arr[256] = { 0 };
 static int screen;
 static int sw, sh;	   /* X display screen geometry width, height */
 static int gap = 1;	  /* enables gaps, used by togglegaps */
-static unsigned int numlockmask = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
 static Cursor cursor[CurLast];
@@ -230,21 +227,6 @@ configure(Client *c)
 	ce.above = None;
 	ce.override_redirect = false;
 	XSendEvent(dpy, c->win, false, StructureNotifyMask, (XEvent *)&ce);
-}
-
-
-
-Monitor *
-createmon(void)
-{
-	Monitor *m;
-
-	m = scalloc(1, sizeof(Monitor));
-	m->tags = 1;
-	m->mfact = mfact;
-	m->nmaster = nmaster;
-	m->showbar = showbar;
-	return m;
 }
 
 void
@@ -846,10 +828,15 @@ updategeom(void)
 		if (n <= nn) { /* new monitors available */
 			for (i = 0; i < (nn - n); i++) {
 				for (m = mons; m && m->next; m = m->next);
+
+				Monitor *cre = scalloc(1, sizeof(Monitor));
+				cre->tags = 1, cre->mfact = mfact, cre->nmaster = nmaster,
+						cre->showbar = showbar;
+
 				if (m)
-					m->next = createmon();
+					m->next = cre;
 				else
-					mons = createmon();
+					mons = cre;
 			}
 			for (i = 0, m = mons; i < nn && m; m = m->next, i++)
 				if (i >= n
@@ -883,8 +870,12 @@ updategeom(void)
 	} else
 #endif /* XINERAMA */
 	{ /* default monitor setup */
-		if (!mons)
-			mons = createmon();
+		if (!mons) {
+			mons = scalloc(1, sizeof(Monitor));
+			mons->tags = 1, mons->mfact = mfact,
+					mons->nmaster = nmaster,
+					mons->showbar = showbar;
+		}
 		if (mons->mw != sw || mons->mh != sh) {
 			dirty = 1;
 			mons->mw = mons->ww = sw;
@@ -897,22 +888,6 @@ updategeom(void)
 		selmon = wintomon(root);
 	}
 	return dirty;
-}
-
-void
-updatenumlockmask(void)
-{
-	unsigned int i, j;
-	XModifierKeymap *modmap;
-
-	numlockmask = 0;
-	modmap = XGetModifierMapping(dpy);
-	for (i = 0; i < 8; i++)
-		for (j = 0; j < modmap->max_keypermod; j++)
-			if (modmap->modifiermap[i * modmap->max_keypermod + j]
-				== XKeysymToKeycode(dpy, XK_Num_Lock))
-				numlockmask = (1 << i);
-	XFreeModifiermap(modmap);
 }
 
 void

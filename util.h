@@ -21,7 +21,7 @@
 #define MOUSE  (BUTTON | PointerMotionMask)
 #define TAG    ((1 << LENGTH(tags)) - 1)
 
-#define CLEAN(mask) (mask & ~(numlockmask | LockMask) & (ShiftMask | \
+#define CLEAN(mask) (mask & ~(numlock | LockMask) & (ShiftMask | \
 	ControlMask | Mod1Mask | Mod2Mask | Mod3Mask | Mod4Mask | Mod5Mask))
 
 void die(const char *fmt, ...);
