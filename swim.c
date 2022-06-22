@@ -44,6 +44,7 @@
 #include <X11/XKBlib.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "grab.h"
 #include "act.h"
 #include "drw.h"
 #include "struct.h"
@@ -76,8 +77,6 @@ Atom getatomprop(Client *c, Atom prop);
 int getrootptr(int *x, int *y);
 long getstate(Window w);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-void grabbuttons(Client *c, int focused);
-void grabkeys(void);
 
 void keypress(XEvent *e);
 
@@ -576,7 +575,7 @@ focus(Client *c)
 			seturgent(c, 0);
 		detachstack(c);
 	c->snext = c->mon->stack; c->mon->stack = c;
-		grabbuttons(c, 1);
+		grabbuttons(dpy, c, 1);
 		XSetWindowBorder(dpy, c->win, scheme[ClrSel][ColBorder].pixel);
 		setfocus(c);
 	} else {
@@ -666,45 +665,6 @@ gettextprop(Window w, Atom atom, char *text, unsigned int size)
 	return 1;
 }
 
-void
-grabbuttons(Client *c, int focused)
-{
-	updatenumlockmask();
-	{
-		unsigned int i, j;
-		unsigned int modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
-		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-		if (!focused)
-			XGrabButton(dpy, AnyButton, AnyModifier, c->win, false,
-				BUTTON, GrabModeSync, GrabModeSync, None, None);
-		for (i = 0; i < LENGTH(buttons); i++)
-			if (buttons[i].click == ClkClientWin)
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabButton(dpy, buttons[i].button,
-						buttons[i].mask | modifiers[j],
-						c->win, false, BUTTON,
-						GrabModeAsync, GrabModeSync, None, None);
-	}
-}
-
-void
-grabkeys(void)
-{
-	updatenumlockmask();
-	{
-		unsigned int i, j;
-		unsigned int modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
-		KeyCode code;
-
-		XUngrabKey(dpy, AnyKey, AnyModifier, root);
-		for (i = 0; i < LENGTH(keys); i++)
-			if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
-						True, GrabModeAsync, GrabModeAsync);
-	}
-}
-
 #ifdef XINERAMA
 static int
 isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
@@ -748,7 +708,7 @@ keypress(XEvent *evt)
 		spawn(arg);
 	case XK_Escape: /* FALLTHROUGH */
 		exec = -1, exec_arr[0] = '\0';
-		grabkeys();
+		grabkeys(dpy);
 		break;
 	case XK_BackSpace:
 		size_t i = 0;
@@ -803,7 +763,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatesizehints(c);
 	updatewmhints(c);
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
-	grabbuttons(c, 0);
+	grabbuttons(dpy, c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating)
@@ -829,7 +789,7 @@ mappingnotify(XEvent *e)
 
 	XRefreshKeyboardMapping(ev);
 	if (ev->request == MappingKeyboard)
-		grabkeys();
+		grabkeys(dpy);
 }
 
 void
@@ -1154,7 +1114,7 @@ unfocus(Client *c, int setfocus)
 {
 	if (!c)
 		return;
-	grabbuttons(c, 0);
+	grabbuttons(dpy, c, 0);
 	XSetWindowBorder(dpy, c->win, scheme[ClrNorm][ColBorder].pixel);
 	if (setfocus) {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
@@ -1535,7 +1495,7 @@ main(int argc, char **argv)
 	};
 	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &sattrs);
 	XSelectInput(dpy, root, sattrs.event_mask);
-	grabkeys();
+	grabkeys(dpy);
 	focus(NULL);
 
 	XWindowAttributes attrs;

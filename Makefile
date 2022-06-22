@@ -6,8 +6,8 @@
 
 include config.mk
 
-SRC = drw.c swim.c util.c xerr.c config.c act.c
-HEAD = drw.h struct.h util.h xerr.h config.h act.h
+SRC = drw.c swim.c util.c xerr.c config.c act.c grab.c
+HEAD = drw.h struct.h util.h xerr.h config.h act.h grab.h
 OBJ = $(SRC:.c=.o)
 
 all: swim
