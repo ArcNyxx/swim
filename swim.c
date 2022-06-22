@@ -1,36 +1,15 @@
-/* See LICENSE file for copyright and license details.
- *
- * dynamic window manager is designed like any other X client as well. It is
- * driven through handling X events. In contrast to other X clients, a window
- * manager selects for SubstructureRedirectMask on the root window, to receive
- * events about window (dis-)appearance. Only one X connection at a time is
- * allowed to select for this event mask.
- *
- * The event handlers of dwm are organized in an array which is accessed
- * whenever a new event has been fetched. This allows event dispatching
- * in O(1) time.
- *
- * Each child of the root window is called a client, except windows which have
- * set the override_redirect flag. Clients are organized in a linked client
- * list on each monitor, the focus history is remembered through a stack list
- * on each monitor. Each client contains a bit array to indicate the tags of a
- * client.
- *
- * Keys and tagging rules are organized as arrays and defined in config.h.
- *
- * To understand everything else, start reading main().
- */
-#include <errno.h>
-#include <locale.h>
+/* swim - simple window manager
+ * Copyright (C) 2021-2022 ArcNyxx
+ * see LICENCE file for licensing information */
+
 #include <signal.h>
-#include <stdarg.h>
+#include <sys/wait.h>
+
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -44,15 +23,15 @@
 #include <X11/XKBlib.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "grab.h"
-#include "conv.h"
 #include "act.h"
+#include "config.h"
+#include "conv.h"
 #include "drw.h"
+#include "grab.h"
 #include "struct.h"
 #include "util.h"
 #include "xerr.h"
 
-/* function declarations */
 int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 void arrange(Monitor *m);
 void buttonpress(XEvent *e);
@@ -71,46 +50,29 @@ void enternotify(XEvent *e);
 void expose(XEvent *e);
 void focus(Client *c);
 void focusin(XEvent *e);
-
-
 Atom getatomprop(Client *c, Atom prop);
 long getstate(Window w);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-
 void keypress(XEvent *e);
-
 void manage(Window w, XWindowAttributes *wa);
 void mappingnotify(XEvent *e);
 void maprequest(XEvent *e);
 void motionnotify(XEvent *e);
-
 Client *nexttiled(Client *c);
 void pop(Client *);
 void propertynotify(XEvent *e);
-
 void resize(Client *c, int x, int y, int w, int h, int interact);
 void resizeclient(Client *c, int x, int y, int w, int h);
-
 void restack(Monitor *m);
 int sendevent(Client *c, Atom proto);
 void sendmon(Client *c, Monitor *m);
 void setclientstate(Client *c, long state);
 void setfocus(Client *c);
 void setfullscreen(Client *c, int fullscreen);
-
-
 void seturgent(Client *c, int urg);
 void showhide(Client *c);
 void sigchld(int unused);
-
-
-
-
 void tile(Monitor *);
-
-
-
-
 void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
 void unmapnotify(XEvent *e);
@@ -124,35 +86,21 @@ void updatetitle(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
-Client *wintoclient(Window w);
-
-
-/* variables */
-char stext[256];
 int exec = -1;
-char exec_arr[256] = { 0 };
+char stext[256], execa[256] = { 0 };
+
 int screen;
 int sw, sh;	   /* X display screen geometry width, height */
 int gap = 1;	  /* enables gaps, used by togglegaps */
-unsigned int numlockmask = 0;
 Atom wmatom[WMLast], netatom[NetLast];
 int running = 1;
-
 Cursor cursor;
-
 Clr **scheme;
 Display *dpy;
 Drw *drw;
 Monitor *mons, *selmon;
 Window root;
 
-/* configuration, allows nested code to access above variables */
-#include "config.h"
-
-/* compile-time check if all tags fit into an unsigned int bit array. */
-struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
-
-/* function implementations */
 int
 applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 {
@@ -311,20 +259,11 @@ clientmessage(XEvent *e)
 void
 configure(Client *c)
 {
-	XConfigureEvent ce;
-
-	ce.type = ConfigureNotify;
-	ce.display = dpy;
-	ce.event = c->win;
-	ce.window = c->win;
-	ce.x = c->x;
-	ce.y = c->y;
-	ce.width = c->w;
-	ce.height = c->h;
-	ce.border_width = borderw;
-	ce.above = None;
-	ce.override_redirect = false;
-	XSendEvent(dpy, c->win, false, StructureNotifyMask, (XEvent *)&ce);
+	XConfigureEvent evt = { .type = ConfigureNotify, .display = dpy,
+			.event = c->win, .window = c->win, .x = c->x,
+			.y = c->y, .width = c->w, .height = c->h, .above = 0,
+			.border_width = borderw, .override_redirect = false };
+	XSendEvent(dpy, c->win, false, StructureNotifyMask, (XEvent *)&evt);
 }
 
 void
@@ -490,7 +429,7 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - x) > (drw->fonts->h + 2)) {
 		if (exec != -1) {
 			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
-			drw_text(drw, x, 0, w, (drw->fonts->h + 2), (drw->fonts->h) / 2, exec_arr, 0);
+			drw_text(drw, x, 0, w, (drw->fonts->h + 2), (drw->fonts->h) / 2, execa, 0);
 		} else if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
 			if (exec == -1)
@@ -670,26 +609,26 @@ keypress(XEvent *evt)
 			(evt->xkey.state & ShiftMask) != 0);
 	switch (keysym) {
 	case XK_Return:
-		char *ptrs[8] = { 0 }; ptrs[0] = exec_arr;
+		char *ptrs[8] = { 0 }; ptrs[0] = execa;
 		for (size_t i = 0, j = 1; i < exec; ++i)
-			if (exec_arr[i] == ' ') {
-				exec_arr[i] = '\0';
-				ptrs[j++] = &exec_arr[i + 1];
+			if (execa[i] == ' ') {
+				execa[i] = '\0';
+				ptrs[j++] = &execa[i + 1];
 			}
 		Arg arg = { .v = ptrs };
 		spawn(arg);
 	case XK_Escape: /* FALLTHROUGH */
-		exec = -1, exec_arr[0] = '\0';
+		exec = -1, execa[0] = '\0';
 		grabkeys(dpy);
 		break;
 	case XK_BackSpace:
 		size_t i = 0;
-		while (exec - i > 0 && (exec_arr[exec - ++i] & 0xc0) ==0x80);
-		exec_arr[(exec -= i)] = '\0';
+		while (exec - i > 0 && (execa[exec - ++i] & 0xc0) ==0x80);
+		execa[(exec -= i)] = '\0';
 		break;
 	default:
-		exec += xkb_keysym_to_utf8(keysym, &exec_arr[exec],
-				sizeof(exec_arr) - exec) - 1;
+		exec += xkb_keysym_to_utf8(keysym, &execa[exec],
+				sizeof(execa) - exec) - 1;
 	}
 	drawbar(selmon);
 }
@@ -1247,22 +1186,6 @@ updategeom(void)
 }
 
 void
-updatenumlockmask(void)
-{
-	unsigned int i, j;
-	XModifierKeymap *modmap;
-
-	numlockmask = 0;
-	modmap = XGetModifierMapping(dpy);
-	for (i = 0; i < 8; i++)
-		for (j = 0; j < modmap->max_keypermod; j++)
-			if (modmap->modifiermap[i * modmap->max_keypermod + j]
-				== XKeysymToKeycode(dpy, XK_Num_Lock))
-				numlockmask = (1 << i);
-	XFreeModifiermap(modmap);
-}
-
-void
 updatesizehints(Client *c)
 {
 	long msize;
@@ -1346,12 +1269,8 @@ updatewmhints(Client *c)
 int
 main(int argc, char **argv)
 {
-	if (setlocale(LC_CTYPE, "") == NULL || XSupportsLocale() == false)
-		fputs("swim: no locale support\n", stderr);
-
 	if ((dpy = XOpenDisplay(NULL)) == NULL)
 		die("swim: unable to open display\n");
-
 	chkwm(dpy);
 
 	sigchld(0); /* reap zombies */
