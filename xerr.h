@@ -4,4 +4,4 @@
 
 int xetemp(Display *dpy, XErrorEvent *evt);
 int xerror(Display *dpy, XErrorEvent *evt);
-int chkwm(Display *dpy);
+void chkwm(Display *dpy);

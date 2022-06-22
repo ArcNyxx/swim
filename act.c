@@ -127,8 +127,8 @@ spawn(const Arg arg)
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
-		execvp(((char **)arg.v)[0], (char **)arg.v);
-		die("swim: unable to run %s: ", ((char **)arg.v)[0]);
+		execvp(((char *const *)arg.v)[0], (char *const *)arg.v);
+		die("swim: unable to run %s: ", ((char *const *)arg.v)[0]);
 	}
 }
 

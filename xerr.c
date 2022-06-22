@@ -9,10 +9,9 @@
 #include <X11/Xproto.h>
 
 #include "util.h"
+#include "xerr.h"
 
 static int (*xeorig)(Display *, XErrorEvent *);
-
-static int xchkwm(Display *dpy, XErrorEvent *evt);
 
 static int
 xchkwm(Display *dpy, XErrorEvent *evt)
@@ -20,6 +19,7 @@ xchkwm(Display *dpy, XErrorEvent *evt)
 	(void)dpy, (void)evt;
 	die("swim: another window manager already running\n");
 	/* NOTREACHED */
+	return 1;
 }
 
 int

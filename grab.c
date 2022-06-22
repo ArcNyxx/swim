@@ -3,6 +3,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
+#include "grab.h"
 #include "struct.h"
 #include "util.h"
 #include "config.h"

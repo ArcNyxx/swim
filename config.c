@@ -26,15 +26,15 @@ const char *colors[2][3] = {
 };
 
 const Key keys[60] = {
-	{ MODKEY, XK_equal, spawn, { .v = (void *[])
+	{ MODKEY, XK_equal, spawn, { .v = (const void *[])
 			{ "amixer", "set", "Master", "5%+", NULL } } },
-	{ MODKEY, XK_minus, spawn, { .v = (void *[])
+	{ MODKEY, XK_minus, spawn, { .v = (const void *[])
 			{ "amixer", "set", "Master", "5%-", NULL } } },
-	{ MODKEY, XK_m,     spawn, { .v = (void *[])
+	{ MODKEY, XK_m,     spawn, { .v = (const void *[])
 			{ "amixer", "set", "Master", "toggle", NULL } } },
 
-	{ MODKEY, XK_Return, spawn, { .v = (void *[]){ "st", NULL } } },
-	{ MODKEY, XK_w,      spawn, { .v = (void *[]){ "chromium", NULL } } },
+	{ MODKEY, XK_Return, spawn, { .v = (const void *[]){ "st", NULL } } },
+	{ MODKEY, XK_w,      spawn, { .v = (const void *[]){ "chromium", NULL } } },
 	{ MODKEY, XK_e,      startexec, { 0 } },
 	{ MODKEY | ShiftMask, XK_q, killclient, { 0 } },
 

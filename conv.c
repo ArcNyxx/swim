@@ -28,14 +28,14 @@ dirtomon(int dir)
 Monitor *
 recttomon(int x, int y, int w, int h)
 {
-	int area = 0, nextarea;
+	int area, lastarea = 0;
 	Monitor *mon, *save = selmon;
 	for (mon = mons; mon != NULL; mon = mon->next)
 		if ((area = MAX(0, MIN(x + w, mon->wx + mon->ww) -
 				MAX(x, mon->wx)) *
 				MAX(0, MIN(y + h, mon->wy + mon->wh) -
-				MAX(y, mon->wy))) > nextarea)
-			nextarea = area, save = mon;
+				MAX(y, mon->wy))) > lastarea)
+			lastarea = area, save = mon;
 	return save;
 }
 
