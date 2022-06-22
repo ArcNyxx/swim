@@ -5,6 +5,8 @@
 #ifndef STRUCT_H
 #define STRUCT_H
 
+#include <X11/Xlib.h>
+
 enum { CurNorm, CurSize, CurMove, CurLast };
 enum { ClrNorm, ClrSel };
 enum { ClkTagBar, ClkStatusText, ClkWinTitle, ClkClientWin,
@@ -13,7 +15,6 @@ enum { NetSupported, NetWMName, NetWMState, NetWMCheck, NetWMFullscreen,
 		NetActiveWindow, NetWMWindowType, NetWMWindowTypeDialog,
 		NetClientList, NetLast };
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
-
 
 typedef union  arg     Arg;
 typedef struct button  Button;
@@ -46,12 +47,12 @@ struct client {
 	Client *next, *snext;
 	Monitor *mon;
 
-        float mina, maxa;
-        int x, y, w, h;
-        int oldx, oldy, oldw, oldh;
-        int basew, baseh, incw, inch, maxw, maxh, minw, minh;
-        int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
-        Window win;
+	float mina, maxa;
+	int x, y, w, h;
+	int oldx, oldy, oldw, oldh;
+	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	Window win;
 };
 
 struct monitor {
@@ -61,9 +62,9 @@ struct monitor {
 	Monitor *next;
 
 	int by;               /* bar geometry */
-        int mx, my, mw, mh;   /* screen size */
-        int wx, wy, ww, wh;   /* window area  */
-        Window barwin;
+	int mx, my, mw, mh;   /* screen size */
+	int wx, wy, ww, wh;   /* window area  */
+	Window barwin;
 };
 
 #endif /* STRUCT_H */

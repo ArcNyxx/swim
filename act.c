@@ -9,12 +9,12 @@
 #include <X11/Xlib.h>
 
 #include "act.h"
+#include "conv.h"
 #include "config.h"
 #include "drw.h"
 #include "struct.h"
 #include "util.h"
 
-Monitor *dirtomon(int dir);
 void unfocus(Client *c, int setfocus);
 void focus(Client *c);
 void restack(Monitor *m);
@@ -25,13 +25,11 @@ void arrange(Monitor *m);
 void sendmon(Client *c, Monitor *m);
 Client *nexttiled(Client *c);
 
-
 extern int gap, exec;
 extern bool running;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
 extern Atom wmatom[WMLast];
-
 extern Window root;
 extern Drw *drw;
 

@@ -45,6 +45,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "grab.h"
+#include "conv.h"
 #include "act.h"
 #include "drw.h"
 #include "struct.h"
@@ -64,7 +65,6 @@ Monitor *createmon(void);
 void destroynotify(XEvent *e);
 void detach(Client *c);
 void detachstack(Client *c);
-Monitor *dirtomon(int dir);
 void drawbar(Monitor *m);
 void drawbars(void);
 void enternotify(XEvent *e);
@@ -74,7 +74,6 @@ void focusin(XEvent *e);
 
 
 Atom getatomprop(Client *c, Atom prop);
-int getrootptr(int *x, int *y);
 long getstate(Window w);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 
@@ -89,7 +88,6 @@ Client *nexttiled(Client *c);
 void pop(Client *);
 void propertynotify(XEvent *e);
 
-Monitor *recttomon(int x, int y, int w, int h);
 void resize(Client *c, int x, int y, int w, int h, int interact);
 void resizeclient(Client *c, int x, int y, int w, int h);
 
@@ -127,7 +125,6 @@ void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
 Client *wintoclient(Window w);
-Monitor *wintomon(Window w);
 
 
 /* variables */
@@ -454,21 +451,6 @@ detachstack(Client *c)
 	}
 }
 
-Monitor *
-dirtomon(int dir)
-{
-	Monitor *m = NULL;
-
-	if (dir > 0) {
-		if (!(m = selmon->next))
-			m = mons;
-	} else if (selmon == mons)
-		for (m = mons; m->next; m = m->next);
-	else
-		for (m = mons; m->next != selmon; m = m->next);
-	return m;
-}
-
 void
 drawbar(Monitor *m)
 {
@@ -610,16 +592,6 @@ getatomprop(Client *c, Atom prop)
 		XFree(p);
 	}
 	return atom;
-}
-
-int
-getrootptr(int *x, int *y)
-{
-	int di;
-	unsigned int dui;
-	Window dummy;
-
-	return XQueryPointer(dpy, root, &dummy, &dummy, x, y, &di, &di, &dui);
 }
 
 long
@@ -874,21 +846,6 @@ propertynotify(XEvent *e)
 		if (ev->atom == netatom[NetWMWindowType])
 			updatewindowtype(c);
 	}
-}
-
-Monitor *
-recttomon(int x, int y, int w, int h)
-{
-	Monitor *m, *r = selmon;
-	int a, area = 0;
-
-	for (m = mons; m; m = m->next)
-		if (MAX(0, MIN(x + w, m->wx + m->ww) - MAX(x, m->wx)) *
-				MAX(0, MIN(y + h, m->wy + m->wh) - MAX(y, m->wy))) {
-			area = a;
-			r = m;
-		}
-	return r;
 }
 
 void
@@ -1384,36 +1341,6 @@ updatewmhints(Client *c)
 			c->neverfocus = 0;
 		XFree(wmh);
 	}
-}
-
-Client *
-wintoclient(Window w)
-{
-	Client *c;
-	Monitor *m;
-
-	for (m = mons; m; m = m->next)
-		for (c = m->clients; c; c = c->next)
-			if (c->win == w)
-				return c;
-	return NULL;
-}
-
-Monitor *
-wintomon(Window w)
-{
-	int x, y;
-	Client *c;
-	Monitor *m;
-
-	if (w == root && getrootptr(&x, &y))
-		return recttomon(x, y, 1, 1);
-	for (m = mons; m; m = m->next)
-		if (w == m->barwin)
-			return m;
-	if ((c = wintoclient(w)))
-		return c->mon;
-	return selmon;
 }
 
 int

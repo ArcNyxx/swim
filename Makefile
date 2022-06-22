@@ -6,17 +6,11 @@
 
 include config.mk
 
-SRC = drw.c swim.c util.c xerr.c config.c act.c grab.c
-HEAD = drw.h struct.h util.h xerr.h config.h act.h grab.h
-OBJ = $(SRC:.c=.o)
+SRC  = act.c config.c conv.c drw.c grab.c util.c xerr.c swim.c
+HEAD = act.h config.h conv.h drw.h grab.h util.h xerr.h struct.h
+OBJ  = $(SRC:.c=.o)
 
 all: swim
-
-options:
-	@echo swim build options:
-	@echo "COMPILER = $(CC)"
-	@echo "CFLAGS   = $(CFLAGS)"
-	@echo "LDFLAGS  = $(LDFLAGS)"
 
 $(OBJ): $(HEAD) config.mk
 
@@ -29,30 +23,21 @@ swim: $(OBJ)
 clean:
 	rm -f swim $(OBJ) swim-*.tar.gz
 
-devclean: clean
-	rm -f config.h
-
-devswim: devclean install
-
 dist: clean
 	mkdir -p swim-$(VERSION)
-	cp -R LICENSE README Makefile config.mk config.def.h \
-		$(SRC) $(HEAD) swim.1 swim-$(VERSION)
-	tar -cf swim-$(VERSION).tar swim-$(VERSION)
-	gzip swim-$(VERSION).tar
+	cp -R LICENSE README Makefile config.mk $(SRC) $(HEAD) swim.1 \
+		swim-$(VERSION)
+	tar -cf - swim-$(VERSION) | gzip -c > swim-$(VERSION).tar.gz
 	rm -rf swim-$(VERSION)
 
 install: all
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp -f swim $(DESTDIR)$(PREFIX)/bin
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/swim
-	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
-	sed "s/VERSION/$(VERSION)/g" < swim.1 > \
-		$(DESTDIR)$(MANPREFIX)/man1/swim.1
-	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/swim.1
+	mkdir -p $(PREFIX)/bin $(MANPREFIX)/man1
+	cp -f swim $(PREFIX)/bin
+	chmod 755 $(PREFIX)/bin/swim
+	sed 's/VERSION/$(VERSION)/g' < swim.1 > $(MANPREFIX)/man1/swim.1
+	chmod 644 $(MANPREFIX)/man1/swim.1
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/swim \
-		$(DESTDIR)$(MANPREFIX)/man1/swim.1
+	rm -f $(PREFIX)/bin/swim $(MANPREFIX)/man1/swim.1
 
-.PHONY: all options clean devclean devswim dist install uninstall
+.PHONY: all clean dist install uninstall
