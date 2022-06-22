@@ -205,20 +205,10 @@ view(const Arg arg)
 void
 zoom(const Arg arg)
 {
-       Client *c = selmon->sel;
-
-       if (selmon->sel && selmon->sel->isfloating)
-               return;
-       if (c == nexttiled(selmon->clients))
-               if (!c || !(c = nexttiled(c->next)))
-                       return;
-       pop(c);
-
-
-//	Client *client = selmon->sel;
-//	if (client != NULL && client->isfloating)
-//		return;
-//	if (client != nexttiled(selmon->clients) || (client != NULL &&
-//			(client = nexttiled(client->next)) != NULL))
-//		pop(client);
+	Client *client = selmon->sel;
+	if (client != NULL && client->isfloating)
+		return;
+	if (client != nexttiled(selmon->clients) || (client != NULL &&
+			(client = nexttiled(client->next)) != NULL))
+		pop(client);
 }

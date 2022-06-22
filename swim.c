@@ -141,7 +141,9 @@ int gap = 1;	  /* enables gaps, used by togglegaps */
 unsigned int numlockmask = 0;
 Atom wmatom[WMLast], netatom[NetLast];
 int running = 1;
-Cursor cursor[CurLast];
+
+Cursor cursor;
+
 Clr **scheme;
 Display *dpy;
 Drw *drw;
@@ -1215,7 +1217,7 @@ updatebars(void)
 		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, (drw->fonts->h + 2), 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XDefineCursor(dpy, m->barwin, cursor[CurNorm]);
+		XDefineCursor(dpy, m->barwin, cursor);
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
 	}
@@ -1498,9 +1500,7 @@ main(int argc, char **argv)
 			"_NET_WM_WINDOW_TYPE_DIALOG", false);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", false);
 
-	cursor[CurNorm] = XCreateFontCursor(dpy, XC_left_ptr);
-	cursor[CurSize] = XCreateFontCursor(dpy, XC_sizing);
-	cursor[CurMove]   = XCreateFontCursor(dpy, XC_fleur);
+	cursor = XCreateFontCursor(dpy, XC_left_ptr);
 
 	scheme = scalloc(LENGTH(colors), sizeof(Clr *));
 	for (size_t i = 0; i < LENGTH(colors); i++)
@@ -1526,7 +1526,7 @@ main(int argc, char **argv)
 	
 	/* select events */
 	XSetWindowAttributes sattrs = {
-		.cursor = cursor[CurNorm],
+		.cursor = cursor,
 		.event_mask = ButtonPressMask | EnterWindowMask |
 				LeaveWindowMask | PointerMotionMask |
 				PropertyChangeMask | StructureNotifyMask |
@@ -1599,8 +1599,7 @@ scanps:
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
 	while (mons)
 		cleanupmon(mons);
-	for (size_t i = 0; i < LENGTH(cursor); ++i)
-		XFreeCursor(dpy, cursor[i]);
+	XFreeCursor(dpy, cursor);
 	for (iter = 0; iter < LENGTH(colors); iter++)
 		free(scheme[iter]);
 	XDestroyWindow(dpy, wmcheckwin);
