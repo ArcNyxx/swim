@@ -2,10 +2,13 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
-#define GAPIH 12
-#define GAPIV 12
-#define GAPOH 8
-#define GAPOV 8
+#include <X11/Xlib.h>
+#include <X11/keysym.h>
+
+#include "struct.h"
+#include "act.h"
+
+#define MODKEY Mod4Mask
 
 const unsigned int borderw = 1;  /* border width of windows */
 const unsigned int mfact   = 50; /* percentage factor of master area */
@@ -14,18 +17,15 @@ const unsigned int snap    = 32; /* mouse functions snap boundary */
 const int showbar          = 1;  /* show status bar */
 const int topbar           = 0;  /* status bar on top */
 const int resizehints      = 0;  /* enable client resize hints */
-const int lockfullscreen   = 1;  /* force focus on fullscreen window */
 
-const char *fonts[]     = { "monospace:size=10" };
-const char *tags[]      = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-const char *colors[][3] = {
-	[SchemeNorm] = { "#bbbbbb", "#222222", "#444444" },
-	[SchemeSel]  = { "#eeeeee", "#005577", "#005577" }
+const char *fonts[1]     = { "monospace:size=10" };
+const char *tags[9]      = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+const char *colors[2][3] = {
+	[ClrNorm] = { "#bbbbbb", "#222222", "#444444" },
+	[ClrSel]  = { "#eeeeee", "#005577", "#005577" }
 };
 
-#define MODKEY Mod4Mask
-
-const Key keys[] = {
+const Key keys[60] = {
 	{ MODKEY, XK_equal, spawn, { .v = (void *[])
 			{ "amixer", "set", "Master", "5%+", NULL } } },
 	{ MODKEY, XK_minus, spawn, { .v = (void *[])
@@ -41,8 +41,8 @@ const Key keys[] = {
 	{ MODKEY, XK_semicolon, zoom, { 0 } },
 	{ MODKEY, XK_j, focusstack, { .n = 1 } },
 	{ MODKEY, XK_k, focusstack, { .n = -1 } },
-	{ MODKEY, XK_h, setmfact,   { .n = 5 } },
-	{ MODKEY, XK_l, setmfact,   { .n = -5 } },
+	{ MODKEY, XK_l, setmfact,   { .n = 5 } },
+	{ MODKEY, XK_h, setmfact,   { .n = -5 } },
 	{ MODKEY, XK_i, incnmaster, { .n = 1 } },
 	{ MODKEY, XK_o, incnmaster, { .n = -1 } },
 
@@ -53,7 +53,6 @@ const Key keys[] = {
 
 	{ MODKEY, XK_b, togglebar, { 0 } },
 	{ MODKEY, XK_g, togglegaps, { 0 } },
-	{ MODKEY, XK_space, togglefloating, { 0 } },
 
 #define TAGKEY(keysym, shift) \
 	{ MODKEY, keysym, view, { .n = 1 << shift } }, \
@@ -78,7 +77,7 @@ const Key keys[] = {
 	{ MODKEY | ShiftMask, XK_e, quit, { 0 } }
 };
 
-const Button buttons[] = {
+const Button buttons[4] = {
 	{ ClkTagBar, 0,      Button1, view,       { 0 } },
 	{ ClkTagBar, 0,      Button3, toggleview, { 0 } },
 	{ ClkTagBar, MODKEY, Button1, tag,        { 0 } },

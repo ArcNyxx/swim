@@ -6,8 +6,8 @@
 
 include config.mk
 
-SRC = drw.c swim.c util.c xerr.c
-HEAD = drw.h struct.h util.h xerr.h
+SRC = drw.c swim.c util.c xerr.c config.c act.c
+HEAD = drw.h struct.h util.h xerr.h config.h act.h
 OBJ = $(SRC:.c=.o)
 
 all: swim
@@ -18,10 +18,7 @@ options:
 	@echo "CFLAGS   = $(CFLAGS)"
 	@echo "LDFLAGS  = $(LDFLAGS)"
 
-$(OBJ): $(HEAD) config.h config.mk
-
-config.h:
-	cp config.def.h $@
+$(OBJ): $(HEAD) config.mk
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<

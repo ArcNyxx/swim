@@ -2,13 +2,22 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
-typedef unsigned int   uint;
+#ifndef STRUCT_H
+#define STRUCT_H
+
+enum { CurNorm, CurSize, CurMove, CurLast };
+enum { ClrNorm, ClrSel };
+enum { ClkTagBar, ClkStatusText, ClkWinTitle, ClkClientWin,
+		ClkRootWin, ClkLast };
+enum { NetSupported, NetWMName, NetWMState, NetWMCheck, NetWMFullscreen,
+		NetActiveWindow, NetWMWindowType, NetWMWindowTypeDialog,
+		NetClientList, NetLast };
+enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
+
 
 typedef union  arg     Arg;
-
 typedef struct button  Button;
 typedef struct key     Key;
-
 typedef struct client  Client;
 typedef struct monitor Monitor;
 
@@ -19,14 +28,14 @@ union arg {
 
 struct button {
 	unsigned int click, mask, button;
-	void (*func)(const Arg *);
+	void (*func)(const Arg);
 	const Arg arg;
 };
 
 struct key {
 	unsigned int mod;
 	KeySym keysym;
-	void (*func)(const Arg *);
+	void (*func)(const Arg);
 	const Arg arg;
 };
 
@@ -56,3 +65,5 @@ struct monitor {
         int wx, wy, ww, wh;   /* window area  */
         Window barwin;
 };
+
+#endif /* STRUCT_H */
