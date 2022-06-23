@@ -7,10 +7,8 @@
 
 #include <X11/Xlib.h>
 
-enum { CurNorm, CurSize, CurMove, CurLast };
 enum { ClrNorm, ClrSel };
-enum { ClkTagBar, ClkStatusText, ClkWinTitle, ClkClientWin,
-		ClkRootWin, ClkLast };
+enum { ClkTagBar, ClkStatusText, ClkWinTitle, ClkClientWin, ClkRootWin };
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, NetWMFullscreen,
 		NetActiveWindow, NetWMWindowType, NetWMWindowTypeDialog,
 		NetClientList, NetLast };

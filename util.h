@@ -18,7 +18,6 @@
 #define HEIGHT(client)  (client->h + 2 * borderw)
 
 #define TEXTW(drw, str) drw_fontset_getwidth(drw, str)
-#define PADDING 12
 
 #define BUTTON (ButtonPressMask | ButtonReleaseMask)
 #define MOUSE  (BUTTON | PointerMotionMask)

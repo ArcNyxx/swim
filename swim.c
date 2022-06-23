@@ -1,5 +1,5 @@
 /* swim - simple window manager
- * Copyright (C) 2021-2022 ArcNyxx
+ * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
 #include <X11/X.h>
@@ -22,9 +22,9 @@
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
 #include <X11/XKBlib.h>
-#include <xkbcommon/xkbcommon.h>
 
 #include "act.h"
+#include "bar.h"
 #include "config.h"
 #include "conv.h"
 #include "drw.h"
@@ -41,8 +41,6 @@ void configure(Client *c);
 Monitor *createmon(void);
 void detach(Client *c);
 void detachstack(Client *c);
-void drawbar(Monitor *m);
-void drawbars(void);
 void focus(Client *c);
 Atom getatomprop(Client *c, Atom prop);
 long getstate(Window w);
@@ -65,14 +63,10 @@ void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
 void updatebarpos(Monitor *m);
 void updatebars(void);
-void updateclientlist(void);
 int updategeom(void);
 void updatesizehints(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
-
-extern int exec;
-extern char stext[256], execa[256];
 
 int screen;
 int sw, sh;	   /* X display screen geometry width, height */
@@ -113,10 +107,10 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		if (*y + *h + 2*borderw <= m->wy)
 			*y = m->wy;
 	}
-	if (*h < (PADDING + 2))
-		*h = (PADDING + 2);
-	if (*w < (PADDING + 2))
-		*w = (PADDING + 2);
+	if (*h < PADDING + 4)
+		*h = PADDING + 4;
+	if (*w < PADDING + 4)
+		*w = PADDING + 4;
 	if (resizehints || c->isfloating) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
@@ -225,69 +219,6 @@ detachstack(Client *c)
 		for (t = c->mon->stack; t && !VISIBLE(t); t = t->snext);
 		c->mon->sel = t;
 	}
-}
-
-void
-drawbar(Monitor *m)
-{
-	int x, w, tw = 0;
-	int boxs = PADDING / 9;
-	int boxw = PADDING / 6 + 2;
-	unsigned int i, occ = 0, urg = 0;
-	Client *c;
-
-	if (!m->showbar)
-		return;
-
-	/* draw status first so it can be overdrawn by tags later */
-	if (m == selmon) { /* status is only drawn on selected monitor */
-		drw_setscheme(drw, scheme[ClrNorm]);
-		tw = drw_fontset_getwidth(drw, stext) + 2; /* 2px right padding */
-		drw_text(drw, m->ww - tw, 0, tw, (PADDING + 2), 0, stext, 0);
-	}
-
-	for (c = m->clients; c; c = c->next) {
-		occ |= c->tags;
-		if (c->isurgent)
-			urg |= c->tags;
-	}
-	x = 0;
-	for (i = 0; i < LENGTH(tags); i++) {
-		w = drw_fontset_getwidth(drw, tags[i]) + PADDING;
-		drw_setscheme(drw, scheme[m->tags & 1 << i ? ClrSel : ClrNorm]);
-		drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
-			drw_rect(drw, x + boxs, boxs, boxw, boxw,
-				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-				urg & 1 << i);
-		x += w;
-	}
-
-	if ((w = m->ww - tw - x) > (PADDING + 2)) {
-		if (exec != -1) {
-			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
-			drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, execa, 0);
-		} else if (m->sel) {
-			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
-			if (exec == -1)
-				drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, m->sel->name, 0);
-			if (m->sel->isfloating)
-				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-		} else {
-			drw_setscheme(drw, scheme[ClrNorm]);
-			drw_rect(drw, x, 0, w, (PADDING + 2), 1, 1);
-		}
-	}
-	drw_map(drw, m->barwin, 0, 0, m->ww, (PADDING + 2));
-}
-
-void
-drawbars(void)
-{
-	Monitor *m;
-
-	for (m = mons; m; m = m->next)
-		drawbar(m);
 }
 
 void
@@ -418,7 +349,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->x = MAX(c->x, c->mon->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
-		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? (PADDING + 2) : c->mon->my);
+		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? PADDING + 4 : c->mon->my);
 
 	wc.border_width = borderw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -711,7 +642,15 @@ unmanage(Client *c, int destroyed)
 	}
 	free(c);
 	focus(NULL);
-	updateclientlist();
+
+	XDeleteProperty(dpy, root, netatom[NetClientList]);
+	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
+		for (Client *client = mon->clients; client != NULL;
+				client = client->next)
+			XChangeProperty(dpy, root, netatom[NetClientList],
+					XA_WINDOW, 32, PropModeAppend,
+					(unsigned char *)&client->win, 1);
+
 	arrange(m);
 }
 
@@ -724,11 +663,14 @@ updatebars(void)
 		.background_pixmap = ParentRelative,
 		.event_mask = ButtonPressMask|ExposureMask
 	};
-	XClassHint ch = {"swim", "swim"};
+
+	char swim[] = "swim";
+	XClassHint ch = { swim, swim };
+
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, (PADDING + 2), 0, DefaultDepth(dpy, screen),
+		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADDING + 4, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor);
@@ -743,27 +685,13 @@ updatebarpos(Monitor *m)
 	m->wy = m->my;
 	m->wh = m->mh;
 	if (m->showbar) {
-		m->wh -= (PADDING + 2);
+		m->wh -= PADDING;
 		if (topbar)
-			m->by = m->wy, m->wy += (PADDING + 2);
+			m->by = m->wy, m->wy += PADDING;
 		else
 			m->by = m->wy + m->wh;
 	} else
-		m->by = -(PADDING + 2);
-}
-
-void
-updateclientlist()
-{
-	Client *c;
-	Monitor *m;
-
-	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	for (m = mons; m; m = m->next)
-		for (c = m->clients; c; c = c->next)
-			XChangeProperty(dpy, root, netatom[NetClientList],
-				XA_WINDOW, 32, PropModeAppend,
-				(unsigned char *) &(c->win), 1);
+		m->by = -PADDING;
 }
 
 int
@@ -970,8 +898,9 @@ main(int argc, char **argv)
 			0, 0, 1, 1, 0, 0, 0);
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
+	char swim[] = "swim";
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMName], utf8string, 8,
-		PropModeReplace, (unsigned char *) "swim", 3);
+		PropModeReplace, (unsigned char *)swim, 3);
 	XChangeProperty(dpy, root, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
 	/* EWMH support per view */

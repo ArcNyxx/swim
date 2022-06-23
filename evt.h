@@ -1,5 +1,5 @@
 /* swim - simple window manager
- * Copyright (C) 2021-2022 ArcNyxx
+ * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
 #ifndef EVT_H

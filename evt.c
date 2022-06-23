@@ -1,5 +1,5 @@
 /* swim - simple window manager
- * Copyright (C) 2021-2022 ArcNyxx
+ * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
 #include <X11/X.h>
@@ -13,6 +13,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "act.h"
+#include "bar.h"
 #include "config.h"
 #include "conv.h"
 #include "drw.h"
@@ -38,8 +39,6 @@ static void unmapnotify      (XEvent *evt);
 
 void arrange(Monitor *m);
 void configure(Client *c);
-void drawbar(Monitor *m);
-void drawbars(void);
 void focus(Client *c);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 void manage(Window w, XWindowAttributes *wa);
@@ -60,9 +59,9 @@ int exec = -1;
 char stext[256], execa[256] = { 0 };
 bool running = true;
 
-extern Window root;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
+extern Window root;
 extern Drw *drw;
 extern Atom wmatom[WMLast], netatom[NetLast];
 
@@ -141,7 +140,7 @@ configurenotify(XEvent *evt)
 	sw = cfe->width, sh = cfe->height;
 
 	if (updategeom() || dirty) {
-		drw_resize(drw, sw, PADDING + 2);
+		drw_resize(drw, sw, PADDING + 4);
 		updatebars();
 		for (Monitor *mon = mons; mon != NULL; mon = mon->next) {
 			for (Client *client = mon->clients; client != NULL;
@@ -150,7 +149,7 @@ configurenotify(XEvent *evt)
 					resizeclient(client, mon->mx, mon->my,
 							mon->mw, mon->mh);
 			XMoveResizeWindow(dpy, mon->barwin, mon->wx, mon->by,
-					mon->ww, PADDING + 2);
+					mon->ww, PADDING + 4);
 		}
 		focus(NULL);
 		arrange(NULL);
