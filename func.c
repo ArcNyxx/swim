@@ -32,75 +32,6 @@ extern Drw *drw;
 extern Monitor *mons, *selmon;
 extern Window root;
 
-int
-applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
-{
-	int baseismin;
-	Monitor *m = c->mon;
-
-	/* set minimum possible */
-	*w = MAX(1, *w);
-	*h = MAX(1, *h);
-	if (interact) {
-		if (*x > sw)
-			*x = sw - WIDTH(c);
-		if (*y > sh)
-			*y = sh - HEIGHT(c);
-		if (*x + *w + 2*borderw < 0)
-			*x = 0;
-		if (*y + *h + 2*borderw < 0)
-			*y = 0;
-	} else {
-		if (*x >= m->wx + m->ww)
-			*x = m->wx + m->ww - WIDTH(c);
-		if (*y >= m->wy + m->wh)
-			*y = m->wy + m->wh - HEIGHT(c);
-		if (*x + *w + 2*borderw <= m->wx)
-			*x = m->wx;
-		if (*y + *h + 2*borderw <= m->wy)
-			*y = m->wy;
-	}
-	if (*h < PADDING + 4)
-		*h = PADDING + 4;
-	if (*w < PADDING + 4)
-		*w = PADDING + 4;
-	if (resizehints || c->isfloating) {
-		if (!c->hintsvalid)
-			updatesizehints(c);
-
-		/* see last two sentences in ICCCM 4.1.2.3 */
-		baseismin = c->basew == c->minw && c->baseh == c->minh;
-		if (!baseismin) { /* temporarily remove base dimensions */
-			*w -= c->basew;
-			*h -= c->baseh;
-		}
-		/* adjust for aspect limits */
-		if (c->mina > 0 && c->maxa > 0) {
-			if (c->maxa < (float)*w / *h)
-				*w = *h * c->maxa + 0.5;
-			else if (c->mina < (float)*h / *w)
-				*h = *w * c->mina + 0.5;
-		}
-		if (baseismin) { /* increment calculation requires this */
-			*w -= c->basew;
-			*h -= c->baseh;
-		}
-		/* adjust for increment value */
-		if (c->incw)
-			*w -= *w % c->incw;
-		if (c->inch)
-			*h -= *h % c->inch;
-		/* restore base dimensions */
-		*w = MAX(*w + c->basew, c->minw);
-		*h = MAX(*h + c->baseh, c->minh);
-		if (c->maxw)
-			*w = MIN(*w, c->maxw);
-		if (c->maxh)
-			*h = MIN(*h, c->maxh);
-	}
-	return *x != c->x || *y != c->y || *w != c->w || *h != c->h;
-}
-
 void
 cleanupmon(Monitor *mon)
 {
@@ -340,10 +271,56 @@ pop(Client *c)
 }
 
 void
-resize(Client *c, int x, int y, int w, int h, int interact)
+resize(Client *cli, int x, int y, int w, int h)
 {
-	if (applysizehints(c, &x, &y, &w, &h, interact))
-		resizeclient(c, x, y, w, h);
+	w = MAX(1, w), h = MAX(1, h); /* set minimum */
+
+	Monitor *mon = cli->mon;
+	if (x >= mon->wx + mon->ww)
+		x = mon->wx + mon->ww - WIDTH(cli);
+	if (y >= mon->wy + mon->wh)
+		y = mon->wy + mon->wh - HEIGHT(cli);
+	if (x + w + 2*borderw <= mon->wx)
+		x = mon->wx;
+	if (y + h + 2*borderw <= mon->wy)
+		y = mon->wy;
+
+	if (w < PADDING + 4)
+		w = PADDING + 4;
+	if (h < PADDING + 4)
+		h = PADDING + 4;
+
+	if (!resizehints && !cli->isfloating)
+		goto skip_hints;
+
+	if (!cli->hintsvalid)
+		updatesizehints(cli);
+
+	bool baseismin = cli->basew == cli->minw && cli->baseh == cli->minh;
+	if (baseismin)
+		w -= cli->basew, h -= cli->baseh;
+	if (cli->mina > 0 && cli->maxa > 0) {
+		if (cli->maxa < (float)w / h)
+			w = h * cli->maxa + 0.5;
+		else if (cli->mina < (float)h / w)
+			h = w * cli->mina + 0.5;
+	}
+	if (!baseismin)
+		w -= cli->basew, h -= cli->baseh;
+	if (cli->incw != 0)
+		w -= w % cli->incw;
+	if (cli->inch != 0)
+		h -= h % cli->inch;
+
+	w = MAX(w + cli->basew, cli->minw), h = MAX(h + cli->baseh, cli->minh);
+	if (cli->maxw != 0)
+		w = MIN(w, cli->maxw);
+	if (cli->maxh != 0)
+		h = MIN(h, cli->maxh);
+
+skip_hints:
+	if (x != cli->x || y != cli->y || w != cli->w || h != cli->h)
+		resizeclient(cli, x, y, w, h);
 }
 
 void
@@ -362,26 +339,25 @@ resizeclient(Client *c, int x, int y, int w, int h)
 }
 
 void
-restack(Monitor *m)
+restack(Monitor *mon)
 {
-	Client *c;
-	XEvent ev;
-	XWindowChanges wc;
-
-	drawbar(m);
-	if (!m->sel)
+	drawbar(mon);
+	if (mon->sel == NULL)
 		return;
-	if (m->sel->isfloating)
-		XRaiseWindow(dpy, m->sel->win);
-	wc.stack_mode = Below;
-	wc.sibling = m->barwin;
-	for (c = m->stack; c; c = c->snext)
-		if (!c->isfloating && VISIBLE(c)) {
-			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
-			wc.sibling = c->win;
+	if (mon->sel->isfloating)
+		XRaiseWindow(dpy, mon->sel->win);
+
+	XWindowChanges wc = { .stack_mode = Below, .sibling = mon->barwin };
+	for (Client *cli = mon->stack; cli != NULL; cli = cli->snext)
+		if (!cli->isfloating && VISIBLE(cli)) {
+			XConfigureWindow(dpy, cli->win,
+					CWSibling | CWStackMode, &wc);
+			wc.sibling = cli->win;
 		}
 	XSync(dpy, false);
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+
+	XEvent evt;
+	while (XCheckMaskEvent(dpy, EnterWindowMask, &evt));
 }
 
 void
@@ -685,15 +661,13 @@ updatesizehints(Client *c)
 }
 
 void
-updatewindowtype(Client *c)
+updatewindowtype(Client *cli)
 {
-	Atom state = getatomprop(c, netatom[NetWMState]);
-	Atom wtype = getatomprop(c, netatom[NetWMWindowType]);
-
-	if (state == netatom[NetWMFullscreen])
-		setfullscreen(c, 1);
-	if (wtype == netatom[NetWMWindowTypeDialog])
-		c->isfloating = 1;
+	if (getatomprop(cli, netatom[NetWMState]) == netatom[NetWMFullscreen])
+		setfullscreen(cli, 1);
+	if (getatomprop(cli, netatom[NetWMWindowType]) ==
+			netatom[NetWMWindowTypeDialog])
+		cli->isfloating = 1;
 }
 
 void

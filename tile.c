@@ -2,6 +2,8 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <stdbool.h>
+
 #include <X11/Xlib.h>
 
 #include "config.h"
@@ -26,7 +28,7 @@ showhide(Client *cli)
 	if (VISIBLE(cli)) {
 		XMoveWindow(dpy, cli->win, cli->x, cli->y);
 		if (cli->isfloating && !cli->isfullscreen)
-			resize(cli, cli->x, cli->y, cli->w, cli->h, 0);
+			resize(cli, cli->x, cli->y, cli->w, cli->h);
 		showhide(cli->next); /* show clients top down */
 	} else {
 		showhide(cli->next); /* hide clients bottom up */
@@ -58,7 +60,7 @@ arrange(Monitor *mon)
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
 				GAPOV*gap, width - 2*borderw,
-				height - 2*borderw, 0);
+				height - 2*borderw);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
@@ -74,7 +76,7 @@ arrange(Monitor *mon)
 				mon->wy + totgap + GAPOH*gap,
 				mon->ww - width - 2*borderw -
 				2*GAPOV*gap - GAPIV*gap,
-				height - 2*borderw, 0);
+				height - 2*borderw);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;

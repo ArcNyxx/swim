@@ -9,7 +9,6 @@
 
 #include "struct.h"
 
-int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 void cleanupmon(Monitor *mon);
 void configure(Client *c);
 Monitor *createmon(void);
@@ -22,7 +21,7 @@ int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 void manage(Window w, XWindowAttributes *wa);
 Client *nexttiled(Client *c);
 void pop(Client *);
-void resize(Client *c, int x, int y, int w, int h, int interact);
+void resize(Client *c, int x, int y, int w, int h);
 void resizeclient(Client *c, int x, int y, int w, int h);
 void restack(Monitor *m);
 int sendevent(Client *c, Atom proto);
