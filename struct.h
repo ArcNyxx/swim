@@ -43,7 +43,7 @@ struct key {
 struct client {
 	char name[256];
 	unsigned int tags;
-	
+
 	Client *next, *snext;
 	Monitor *mon;
 

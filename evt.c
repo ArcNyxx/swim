@@ -3,7 +3,6 @@
  * see LICENCE file for licensing information */
 
 #include <stdbool.h>
-#include <stdio.h> //TODO
 
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -65,13 +64,12 @@ extern Window root;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
 extern Drw *drw;
-extern Atom wmatom[WMLast], netatom[NetLast];
+extern Atom netatom[NetLast];
 extern int sw, sh;	   /* X display screen geometry width, height */
 
 static void
 buttonpress(XEvent *evt)
 {
-fprintf(stderr, "buttonpress\n");
 	Monitor *mon;
 	Client *client;
 	Arg arg = { .n = 0 };
@@ -87,11 +85,11 @@ fprintf(stderr, "buttonpress\n");
 	if (bpe->window == selmon->barwin) {
 		int i = 0, x = 0;
 		do
-			x += TEXTW(drw, tags[i]) + drw->fonts->h;
+			x += TEXTW(drw, tags[i]) + PADDING;
 		while (bpe->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags))
 			click = ClkTagBar, arg.n = 1 << i;
-		else if (bpe->x > selmon->ww - TEXTW(drw, stext) + drw->fonts->h)
+		else if (bpe->x > selmon->ww - TEXTW(drw, stext) + PADDING)
 			click = ClkStatusText;
 		else
 			click = ClkWinTitle;
@@ -117,7 +115,6 @@ fprintf(stderr, "buttonpress\n");
 static void
 clientmessage(XEvent *evt)
 {
-fprintf(stderr, "clientmessage\n");
 	Client *client;
 	XClientMessageEvent *cme = &evt->xclient;
 	if ((client = wintoclient(cme->window)) == NULL)
@@ -137,7 +134,6 @@ fprintf(stderr, "clientmessage\n");
 static void
 configurenotify(XEvent *evt)
 {
-fprintf(stderr, "configurenotify\n");
 	XConfigureEvent *cfe = &evt->xconfigure;
 	if (cfe->window != root)
 		return;
@@ -145,7 +141,7 @@ fprintf(stderr, "configurenotify\n");
 	sw = cfe->width, sh = cfe->height;
 
 	if (updategeom() || dirty) {
-		drw_resize(drw, sw, drw->fonts->h + 2);
+		drw_resize(drw, sw, PADDING + 2);
 		updatebars();
 		for (Monitor *mon = mons; mon != NULL; mon = mon->next) {
 			for (Client *client = mon->clients; client != NULL;
@@ -154,7 +150,7 @@ fprintf(stderr, "configurenotify\n");
 					resizeclient(client, mon->mx, mon->my,
 							mon->mw, mon->mh);
 			XMoveResizeWindow(dpy, mon->barwin, mon->wx, mon->by,
-					mon->ww, drw->fonts->h + 2);
+					mon->ww, PADDING + 2);
 		}
 		focus(NULL);
 		arrange(NULL);
@@ -164,7 +160,6 @@ fprintf(stderr, "configurenotify\n");
 static void
 configurerequest(XEvent *evt)
 {
-fprintf(stderr, "configurerequest\n");
 	Client *c;
 	XConfigureRequestEvent *cre = &evt->xconfigurerequest;
 	if ((c = wintoclient(cre->window)) != NULL) {
@@ -207,7 +202,6 @@ fprintf(stderr, "configurerequest\n");
 static void
 destroynotify(XEvent *evt)
 {
-fprintf(stderr, "destroynotify\n");
 	Client *client;
 	if ((client = wintoclient(evt->xdestroywindow.window)) != NULL)
 		unmanage(client, 1);
@@ -216,7 +210,6 @@ fprintf(stderr, "destroynotify\n");
 static void
 enternotify(XEvent *evt)
 {
-fprintf(stderr, "enternotify\n");
 	XCrossingEvent *cre = &evt->xcrossing;
 	if ((cre->mode != NotifyNormal || cre->detail == NotifyInferior) &&
 			cre->window != root)
@@ -227,15 +220,14 @@ fprintf(stderr, "enternotify\n");
 	if (mon != selmon) {
 		unfocus(selmon->sel, 1);
 		selmon = mon;
-	} else if (client != NULL && client != selmon->sel) {
-		focus(client);
-	}
+	} else if (client == NULL || client == selmon->sel)
+		return;
+	focus(client);
 }
 
 static void
 expose(XEvent *evt)
 {
-fprintf(stderr, "expose\n");
 	Monitor *mon;
 	if (evt->xexpose.count == 0 &&
 			(mon = wintomon(evt->xexpose.window)) != NULL)
@@ -245,7 +237,6 @@ fprintf(stderr, "expose\n");
 static void
 focusin(XEvent *evt)
 {
-fprintf(stderr, "focusin\n");
 	if (selmon->sel != NULL && evt->xfocus.window != selmon->sel->win)
 		setfocus(selmon->sel); /* handles broken clients */
 }
@@ -253,7 +244,6 @@ fprintf(stderr, "focusin\n");
 static void
 keypress(XEvent *evt)
 {
-fprintf(stderr, "keypress\n");
 	bool hotkey = false;
 	XKeyEvent *kpe = &evt->xkey;
 	KeySym keysym = XkbKeycodeToKeysym(dpy, kpe->keycode, 0, 0);
@@ -266,7 +256,7 @@ fprintf(stderr, "keypress\n");
 	if (hotkey || exec == -1)
 		return;
 
-	/* presetve uppercase keysym information */
+	/* preserve uppercase keysym information */
 	keysym = XkbKeycodeToKeysym(dpy, kpe->keycode,
 			0, (kpe->state & ShiftMask) != 0);
 	switch (keysym) {
@@ -291,7 +281,6 @@ fprintf(stderr, "keypress\n");
 static void
 mappingnotify(XEvent *evt)
 {
-fprintf(stderr, "mappingnotify\n");
 	XRefreshKeyboardMapping(&evt->xmapping);
 	if (evt->xmapping.request == MappingKeyboard)
 		grabkeys(dpy);
@@ -300,7 +289,6 @@ fprintf(stderr, "mappingnotify\n");
 static void
 maprequest(XEvent *evt)
 {
-fprintf(stderr, "maprequest\n");
 	static XWindowAttributes wa;
 	if (XGetWindowAttributes(dpy, evt->xmaprequest.window, &wa) &&
 			!wa.override_redirect &&
@@ -311,7 +299,6 @@ fprintf(stderr, "maprequest\n");
 static void
 motionnotify(XEvent *evt)
 {
-fprintf(stderr, "motionnotify\n");
 	Monitor *newmon;
 	static Monitor *mon = NULL;
 
@@ -329,7 +316,6 @@ fprintf(stderr, "motionnotify\n");
 static void
 propertynotify(XEvent *evt)
 {
-fprintf(stderr, "propertynotify\n");
 	Client *c;
 	XPropertyEvent *pre = &evt->xproperty;
 	if (pre->window == root && pre->atom == XA_WM_NAME) {
@@ -363,7 +349,6 @@ fprintf(stderr, "propertynotify\n");
 static void
 unmapnotify(XEvent *evt)
 {
-fprintf(stderr, "unmapnotify\n");
 	Client *client;
 	if ((client = wintoclient(evt->xunmap.window)) != NULL) {
 		if (evt->xunmap.window)
@@ -395,7 +380,7 @@ handle_events(Display *dpy)
 	};
 
 	XEvent evt;
-	while (running && XNextEvent(dpy, &evt) == 0)
+	while (running && !XNextEvent(dpy, &evt))
 		if (events[evt.type] != NULL)
 			events[evt.type](&evt);
 }

@@ -11,27 +11,24 @@
 #include "act.h"
 #include "conv.h"
 #include "config.h"
-#include "drw.h"
 #include "struct.h"
 #include "util.h"
 
-void unfocus(Client *c, int setfocus);
+void arrange(Monitor *m);
 void focus(Client *c);
+Client *nexttiled(Client *c);
+void pop(Client *);
 void restack(Monitor *m);
 int sendevent(Client *c, Atom proto);
-void updatebarpos(Monitor *m);
-void pop(Client *);
-void arrange(Monitor *m);
 void sendmon(Client *c, Monitor *m);
-Client *nexttiled(Client *c);
+void unfocus(Client *c, int setfocus);
+void updatebarpos(Monitor *m);
 
 extern int gap, exec;
 extern bool running;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
 extern Atom wmatom[WMLast];
-extern Window root;
-extern Drw *drw;
 
 void
 focusmon(const Arg arg)
@@ -136,8 +133,8 @@ void
 startexec(const Arg arg)
 {
 	exec = 0;
-	XGrabKey(dpy, AnyKey, AnyModifier, root, true,
-			GrabModeAsync, GrabModeAsync);
+	XGrabKey(dpy, AnyKey, AnyModifier, RootWindow(dpy, DefaultScreen(dpy)),
+			true, GrabModeAsync, GrabModeAsync);
 }
 
 void
@@ -163,7 +160,7 @@ togglebar(const Arg arg)
 	selmon->showbar = !selmon->showbar;
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx,
-			selmon->by, selmon->ww, (drw->fonts->h + 2));
+			selmon->by, selmon->ww, PADDING + 2);
 	arrange(selmon);
 }
 

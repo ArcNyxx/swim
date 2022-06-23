@@ -1,12 +1,16 @@
+/* swim - simple window manager
+ * Copyright (C) 2022 ArcNyxx
+ * see LICENCE file for licensing information */
+
 #include <stdbool.h>
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
+#include "config.h"
 #include "grab.h"
 #include "struct.h"
 #include "util.h"
-#include "config.h"
 
 static void getmask(Display *dpy);
 
@@ -16,14 +20,13 @@ static void
 getmask(Display *dpy)
 {
 	numlock = 0;
-	XModifierKeymap *modmap = XGetModifierMapping(dpy);
-
+	XModifierKeymap *map = XGetModifierMapping(dpy);
 	for (int i = 0; i < 8; ++i)
-		for (int j = 0; j < modmap->max_keypermod; ++j)
-			if (modmap->modifiermap[i * modmap->max_keypermod + j]
-					== XKeysymToKeycode(dpy, XK_Num_Lock))
+		for (int j = 0; j < map->max_keypermod; ++j)
+			if (map->modifiermap[i * map->max_keypermod + j] ==
+					XKeysymToKeycode(dpy, XK_Num_Lock))
 				numlock = (1 << i);
-	XFreeModifiermap(modmap);
+	XFreeModifiermap(map);
 }
 
 void

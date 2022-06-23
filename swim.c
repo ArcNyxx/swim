@@ -10,8 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <stdio.h> //TODO
-
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -116,10 +114,10 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		if (*y + *h + 2*borderw <= m->wy)
 			*y = m->wy;
 	}
-	if (*h < (drw->fonts->h + 2))
-		*h = (drw->fonts->h + 2);
-	if (*w < (drw->fonts->h + 2))
-		*w = (drw->fonts->h + 2);
+	if (*h < (PADDING + 2))
+		*h = (PADDING + 2);
+	if (*w < (PADDING + 2))
+		*w = (PADDING + 2);
 	if (resizehints || c->isfloating) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
@@ -234,8 +232,8 @@ void
 drawbar(Monitor *m)
 {
 	int x, w, tw = 0;
-	int boxs = drw->fonts->h / 9;
-	int boxw = drw->fonts->h / 6 + 2;
+	int boxs = PADDING / 9;
+	int boxw = PADDING / 6 + 2;
 	unsigned int i, occ = 0, urg = 0;
 	Client *c;
 
@@ -246,7 +244,7 @@ drawbar(Monitor *m)
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[ClrNorm]);
 		tw = drw_fontset_getwidth(drw, stext) + 2; /* 2px right padding */
-		drw_text(drw, m->ww - tw, 0, tw, (drw->fonts->h + 2), 0, stext, 0);
+		drw_text(drw, m->ww - tw, 0, tw, (PADDING + 2), 0, stext, 0);
 	}
 
 	for (c = m->clients; c; c = c->next) {
@@ -256,9 +254,9 @@ drawbar(Monitor *m)
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
-		w = drw_fontset_getwidth(drw, tags[i]) + (drw->fonts->h);
+		w = drw_fontset_getwidth(drw, tags[i]) + PADDING;
 		drw_setscheme(drw, scheme[m->tags & 1 << i ? ClrSel : ClrNorm]);
-		drw_text(drw, x, 0, w, (drw->fonts->h + 2), (drw->fonts->h) / 2, tags[i], urg & 1 << i);
+		drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
 				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
@@ -266,22 +264,22 @@ drawbar(Monitor *m)
 		x += w;
 	}
 
-	if ((w = m->ww - tw - x) > (drw->fonts->h + 2)) {
+	if ((w = m->ww - tw - x) > (PADDING + 2)) {
 		if (exec != -1) {
 			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
-			drw_text(drw, x, 0, w, (drw->fonts->h + 2), (drw->fonts->h) / 2, execa, 0);
+			drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, execa, 0);
 		} else if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? ClrSel : ClrNorm]);
 			if (exec == -1)
-				drw_text(drw, x, 0, w, (drw->fonts->h + 2), (drw->fonts->h) / 2, m->sel->name, 0);
+				drw_text(drw, x, 0, w, (PADDING + 2), (PADDING) / 2, m->sel->name, 0);
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
 		} else {
 			drw_setscheme(drw, scheme[ClrNorm]);
-			drw_rect(drw, x, 0, w, (drw->fonts->h + 2), 1, 1);
+			drw_rect(drw, x, 0, w, (PADDING + 2), 1, 1);
 		}
 	}
-	drw_map(drw, m->barwin, 0, 0, m->ww, (drw->fonts->h + 2));
+	drw_map(drw, m->barwin, 0, 0, m->ww, (PADDING + 2));
 }
 
 void
@@ -420,7 +418,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->x = MAX(c->x, c->mon->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
-		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? (drw->fonts->h + 2) : c->mon->my);
+		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? (PADDING + 2) : c->mon->my);
 
 	wc.border_width = borderw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -730,11 +728,11 @@ updatebars(void)
 		.background_pixmap = ParentRelative,
 		.event_mask = ButtonPressMask|ExposureMask
 	};
-	XClassHint ch = {"dwm", "dwm"};
+	XClassHint ch = {"swim", "swim"};
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, (drw->fonts->h + 2), 0, DefaultDepth(dpy, screen),
+		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, (PADDING + 2), 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor);
@@ -749,13 +747,13 @@ updatebarpos(Monitor *m)
 	m->wy = m->my;
 	m->wh = m->mh;
 	if (m->showbar) {
-		m->wh -= (drw->fonts->h + 2);
+		m->wh -= (PADDING + 2);
 		if (topbar)
-			m->by = m->wy, m->wy += (drw->fonts->h + 2);
+			m->by = m->wy, m->wy += (PADDING + 2);
 		else
 			m->by = m->wy + m->wh;
 	} else
-		m->by = -(drw->fonts->h + 2);
+		m->by = -(PADDING + 2);
 }
 
 void
@@ -977,8 +975,6 @@ main(int argc, char **argv)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 
 	updatebars();
-	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "dwm");
 	drawbars();
 
 	Window wmcheckwin = XCreateSimpleWindow(dpy, root,
@@ -986,7 +982,7 @@ main(int argc, char **argv)
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMName], utf8string, 8,
-		PropModeReplace, (unsigned char *) "dwm", 3);
+		PropModeReplace, (unsigned char *) "swim", 3);
 	XChangeProperty(dpy, root, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
 	/* EWMH support per view */
@@ -995,14 +991,11 @@ main(int argc, char **argv)
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
 	
 	/* select events */
-	XSetWindowAttributes sattrs = {
-		.cursor = cursor,
-		.event_mask = ButtonPressMask | EnterWindowMask |
-				LeaveWindowMask | PointerMotionMask |
-				PropertyChangeMask | StructureNotifyMask |
-				SubstructureNotifyMask |
-				SubstructureRedirectMask
-	};
+	XSetWindowAttributes sattrs = { .cursor = cursor, .event_mask =
+			ButtonPressMask | EnterWindowMask | LeaveWindowMask |
+			PointerMotionMask | PropertyChangeMask |
+			StructureNotifyMask | SubstructureNotifyMask |
+			SubstructureRedirectMask };
 	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &sattrs);
 	XSelectInput(dpy, root, sattrs.event_mask);
 	grabkeys(dpy);
@@ -1038,7 +1031,6 @@ scanps:
 	XSync(dpy, false);
 
 
-	fprintf(stderr, "starting\n");
 	handle_events(dpy);
 
 	Arg a = { .n = ~0};
@@ -1062,6 +1054,4 @@ scanps:
 	XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 
 	XCloseDisplay(dpy);
-
-	fprintf(stderr, "exiting\n");
 }

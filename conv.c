@@ -5,9 +5,9 @@
 #include "conv.h"
 #include "struct.h"
 #include "util.h"
+#include <X11/Xlib.h>
 
 extern Display *dpy;
-extern Window root;
 extern Monitor *selmon, *mons;
 
 Monitor *
@@ -54,12 +54,12 @@ Monitor *
 wintomon(Window win)
 {
 	int x, y, null;
-	Window dummy;
 	Client *client;
+	Window dummy, root = RootWindow(dpy, DefaultScreen(dpy));
 
 	if (win == root && XQueryPointer(dpy, root, &dummy, &dummy, &x, &y,
 			&null, &null, (unsigned int *)&null))
-		return recttomon(x, y, 0, 1);
+		return recttomon(x, y, 1, 1);
 	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
 		if (win == mon->barwin)
 			return mon;

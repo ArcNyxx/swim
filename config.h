@@ -24,7 +24,7 @@ extern const char *fonts[1];
 extern const char *tags[9];
 extern const char *colors[2][3];
 
-extern const Key keys[60];
+extern const Key keys[59];
 extern const Button buttons[4];
 
 #endif /* CONFIG_H */

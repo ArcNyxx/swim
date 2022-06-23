@@ -9,6 +9,12 @@
 #include "act.h"
 
 #define MODKEY Mod4Mask
+#define TAGKEY(keysym, shift)                                                 \
+	{ MODKEY, keysym, view,                     { .n = 1 << shift } },    \
+	{ MODKEY | ControlMask, keysym, toggleview, { .n = 1 << shift } },    \
+	{ MODKEY | ShiftMask, keysym, tag,          { .n = 1 << shift } },    \
+	{ MODKEY | ControlMask | ShiftMask, keysym, toggletag,                \
+			{ .n = 1 << shift } }
 
 const unsigned int borderw = 1;  /* border width of windows */
 const unsigned int mfact   = 50; /* percentage factor of master area */
@@ -25,7 +31,7 @@ const char *colors[2][3] = {
 	[ClrSel]  = { "#eeeeee", "#005577", "#005577" }
 };
 
-const Key keys[60] = {
+const Key keys[59] = {
 	{ MODKEY, XK_equal, spawn, { .v = (const void *[])
 			{ "amixer", "set", "Master", "5%+", NULL } } },
 	{ MODKEY, XK_minus, spawn, { .v = (const void *[])
@@ -33,8 +39,10 @@ const Key keys[60] = {
 	{ MODKEY, XK_m,     spawn, { .v = (const void *[])
 			{ "amixer", "set", "Master", "toggle", NULL } } },
 
-	{ MODKEY, XK_Return, spawn, { .v = (const void *[]){ "st", NULL } } },
-	{ MODKEY, XK_w,      spawn, { .v = (const void *[]){ "chromium", NULL } } },
+	{ MODKEY, XK_Return, spawn, { .v = (const void *[])
+			{ "st", NULL } } },
+	{ MODKEY, XK_w,      spawn, { .v = (const void *[])
+			{ "chromium", NULL } } },
 	{ MODKEY, XK_e,      startexec, { 0 } },
 	{ MODKEY | ShiftMask, XK_q, killclient, { 0 } },
 
@@ -54,12 +62,6 @@ const Key keys[60] = {
 	{ MODKEY, XK_b, togglebar, { 0 } },
 	{ MODKEY, XK_g, togglegaps, { 0 } },
 
-#define TAGKEY(keysym, shift) \
-	{ MODKEY, keysym, view, { .n = 1 << shift } }, \
-	{ MODKEY | ControlMask, keysym, toggleview, { .n = 1 << shift } }, \
-	{ MODKEY | ShiftMask, keysym, tag, { .n = 1 << shift } }, \
-	{ MODKEY | ControlMask | ShiftMask, keysym, toggletag, \
-		{ .n = 1 << shift } }
 	TAGKEY(XK_1, 0),
 	TAGKEY(XK_2, 1),
 	TAGKEY(XK_3, 2),
@@ -69,7 +71,6 @@ const Key keys[60] = {
 	TAGKEY(XK_7, 6),
 	TAGKEY(XK_8, 7),
 	TAGKEY(XK_9, 8),
-#undef TAGKEY
 
 	{ MODKEY, XK_0, view, { .n = ~0 } },
 	{ MODKEY | ShiftMask, XK_0, tag, { .n = ~0 } },
