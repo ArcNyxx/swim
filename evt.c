@@ -54,8 +54,8 @@ int updategeom(void);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
-int exec = -1;
-char stext[256], execa[256] = { 0 };
+int exec = -1, gap = 1;
+char stext[256] = "", execa[256] = "";
 bool running = true;
 
 extern Display *dpy;
