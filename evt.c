@@ -18,6 +18,8 @@
 #include "conv.h"
 #include "drw.h"
 #include "evt.h"
+#include "func.h"
+#include "tile.h"
 #include "grab.h"
 #include "struct.h"
 #include "util.h"
@@ -37,24 +39,7 @@ static void motionnotify     (XEvent *evt);
 static void propertynotify   (XEvent *evt);
 static void unmapnotify      (XEvent *evt);
 
-void arrange(Monitor *m);
-void configure(Client *c);
-void focus(Client *c);
-int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-void manage(Window w, XWindowAttributes *wa);
-void resizeclient(Client *c, int x, int y, int w, int h);
-void restack(Monitor *m);
-void setfocus(Client *c);
-void setfullscreen(Client *c, int fullscreen);
-void seturgent(Client *c, int urg);
-void unfocus(Client *c, int setfocus);
-void unmanage(Client *c, int destroyed);
-void updatebars(void);
-int updategeom(void);
-void updatewindowtype(Client *c);
-void updatewmhints(Client *c);
-
-int exec = -1, gap = 1;
+int exec = -1;
 char stext[256] = "", execa[256] = "";
 bool running = true;
 
@@ -151,7 +136,7 @@ configurenotify(XEvent *evt)
 					mon->ww, PADDING + 4);
 		}
 		focus(NULL);
-		arrange(NULL);
+		tile(NULL);
 	}
 }
 
@@ -325,7 +310,7 @@ propertynotify(XEvent *evt)
 		if (pre->atom == XA_WM_TRANSIENT_FOR && !c->isfloating &&
 				XGetTransientForHint(dpy, c->win, &tr) &&
 				(c->isfloating = wintoclient(tr) != NULL)) {
-			arrange(c->mon);
+			tile(c->mon);
 		} else if (pre->atom == XA_WM_NORMAL_HINTS) {
 			c->hintsvalid = 0;
 		} else if (pre->atom == XA_WM_HINTS) {

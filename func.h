@@ -10,7 +10,6 @@
 #include "struct.h"
 
 int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
-void arrange(Monitor *m);
 void cleanupmon(Monitor *mon);
 void configure(Client *c);
 Monitor *createmon(void);
@@ -31,8 +30,6 @@ void sendmon(Client *c, Monitor *m);
 void setfocus(Client *c);
 void setfullscreen(Client *c, int fullscreen);
 void seturgent(Client *c, int urg);
-void showhide(Client *c);
-void tile(Monitor *);
 void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
 void updatebarpos(Monitor *m);

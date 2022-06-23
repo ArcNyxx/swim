@@ -31,9 +31,7 @@
 
 static void sigchld(int null);
 
-int screen;
 int sw, sh;	   /* X display screen geometry width, height */
-extern int gap;	  /* enables gaps, used by togglegaps */
 Atom wmatom[WMLast], netatom[NetLast];
 Cursor cursor;
 Clr **scheme;
@@ -51,7 +49,7 @@ sigchld(int null)
 }
 
 int
-main(int argc, char **argv)
+main(void)
 {
 	if ((dpy = XOpenDisplay(NULL)) == NULL)
 		die("swim: unable to open display\n");
@@ -59,12 +57,11 @@ main(int argc, char **argv)
 
 	sigchld(0); /* reap zombies */
 
-	screen = DefaultScreen(dpy);
-	root = RootWindow(dpy, screen);
-	sw = DisplayWidth(dpy, screen);
-	sh = DisplayHeight(dpy, screen);
+	root = RootWindow(dpy, DefaultScreen(dpy));
+	sw = DisplayWidth(dpy, DefaultScreen(dpy));
+	sh = DisplayHeight(dpy, DefaultScreen(dpy));
 
-	drw = drw_create(dpy, screen, root, sw, sh);
+	drw = drw_create(dpy, DefaultScreen(dpy), root, sw, sh);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("swim: unable to create fonts\n");
 
@@ -112,7 +109,7 @@ main(int argc, char **argv)
 	XChangeProperty(dpy, root, netatom[NetSupported], XA_ATOM, 32,
 		PropModeReplace, (unsigned char *) netatom, NetLast);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	
+
 	/* select events */
 	XSetWindowAttributes sattrs = { .cursor = cursor, .event_mask =
 			ButtonPressMask | EnterWindowMask | LeaveWindowMask |

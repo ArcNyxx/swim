@@ -16,16 +16,13 @@ static int (*xeorig)(Display *, XErrorEvent *);
 static int
 xchkwm(Display *dpy, XErrorEvent *evt)
 {
-	(void)dpy, (void)evt;
 	die("swim: another window manager already running\n");
-	/* NOTREACHED */
 	return 1;
 }
 
 int
 xetemp(Display *dpy, XErrorEvent *evt)
 {
-	(void)dpy, (void)evt;
 	return 0;
 }
 
@@ -33,7 +30,6 @@ int
 xerror(Display *dpy, XErrorEvent *evt)
 {
 	switch (evt->error_code) {
-	default: break;
 	case BadMatch:
 		if (evt->request_code != X_ConfigureWindow &&
 				evt->request_code != X_SetInputFocus)
@@ -53,8 +49,9 @@ xerror(Display *dpy, XErrorEvent *evt)
 		return 0;
 	case BadWindow:   /* unable to check destroyed window access, */
 		return 0; /* ignored especially on unmapnotify */
+	default:
+		break;
 	}
-
 	fprintf(stderr, "swim: fatal error: request (%d), error (%d)\n",
 			evt->request_code, evt->error_code);
 	return xeorig(dpy, evt); /* may exit */

@@ -18,13 +18,12 @@
 #include "drw.h"
 #include "func.h"
 #include "grab.h"
+#include "tile.h"
 #include "struct.h"
 #include "util.h"
 #include "xerr.h"
 
-extern int screen;
-extern int sw, sh;	   /* X display screen geometry width, height */
-extern int gap;
+extern int sw, sh;
 extern Atom wmatom[WMLast], netatom[NetLast];
 extern Cursor cursor;
 extern Clr **scheme;
@@ -100,20 +99,6 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 			*h = MIN(*h, c->maxh);
 	}
 	return *x != c->x || *y != c->y || *w != c->w || *h != c->h;
-}
-
-void
-arrange(Monitor *m)
-{
-	if (m)
-		showhide(m->stack);
-	else for (m = mons; m; m = m->next)
-		showhide(m->stack);
-	if (m) {
-		tile(m);
-		restack(m);
-	} else for (m = mons; m; m = m->next)
-		tile(m);
 }
 
 void
@@ -333,7 +318,7 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
-	arrange(c->mon);
+	tile(c->mon);
 	XMapWindow(dpy, c->win);
 	focus(NULL);
 }
@@ -351,7 +336,7 @@ pop(Client *c)
 	detach(c);
 	c->next = c->mon->clients; c->mon->clients = c;
 	focus(c);
-	arrange(c->mon);
+	tile(c->mon);
 }
 
 void
@@ -412,7 +397,7 @@ sendmon(Client *c, Monitor *m)
 	c->next = c->mon->clients; c->mon->clients = c;
 	c->snext = c->mon->stack; c->mon->stack = c;
 	focus(NULL);
-	arrange(NULL);
+	tile(NULL);
 }
 
 int
@@ -473,7 +458,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->w = c->oldw;
 		c->h = c->oldh;
 		resizeclient(c, c->x, c->y, c->w, c->h);
-		arrange(c->mon);
+		tile(c->mon);
 	}
 }
 
@@ -488,71 +473,6 @@ seturgent(Client *c, int urg)
 	wmh->flags = urg ? (wmh->flags | XUrgencyHint) : (wmh->flags & ~XUrgencyHint);
 	XSetWMHints(dpy, c->win, wmh);
 	XFree(wmh);
-}
-
-void
-showhide(Client *c)
-{
-	if (!c)
-		return;
-	if (VISIBLE(c)) {
-		/* show clients top down */
-		XMoveWindow(dpy, c->win, c->x, c->y);
-		if (c->isfloating && !c->isfullscreen)
-			resize(c, c->x, c->y, c->w, c->h, 0);
-		showhide(c->snext);
-	} else {
-		/* hide clients bottom up */
-		showhide(c->snext);
-		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
-	}
-}
-
-void
-tile(Monitor *mon)
-{
-	unsigned int totcli; /* total number of clients */
-	Client *client = nexttiled(mon->clients);
-	for (totcli = 0; client != NULL; ++totcli)
-		client = nexttiled(client->next);
-	client = nexttiled(mon->clients);
-
-	unsigned int width; /* width of master/fullwidth windows */
-	if (totcli > mon->nmaster) /* master and stacking windows separate */
-		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact / 100;
-	else /* master takes up entire monitor */
-		width = mon->ww - 2*GAPOH*gap;
-
-	/* master/fullwidth windows handler */
-	unsigned int clinum = 0, totgap = 0; /* client number and spacing */
-	for (; clinum < mon->nmaster && client != NULL; ++clinum,
-			client = nexttiled(client->next)) {
-		unsigned int numdown = MIN(totcli, mon->nmaster) - clinum;
-		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
-				GAPIV*gap * (numdown - 1)) / numdown;
-		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
-				GAPOV*gap, width - 2*borderw,
-				height - 2*borderw, 0);
-
-		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
-			totgap += HEIGHT(client) + GAPIH*gap;
-	}
-	totgap = 0; /* reset for next handler to use */
-
-	/* stacking windows handler */
-	for (; client != NULL; ++clinum, client = nexttiled(client->next)) {
-		unsigned int numdown = totcli - clinum;
-		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
-				GAPIV*gap * (numdown - 1)) / numdown;
-		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
-				mon->wy + totgap + GAPOH*gap,
-				mon->ww - width - 2*borderw -
-				2*GAPOV*gap - GAPIV*gap,
-				height - 2*borderw, 0);
-
-		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
-			totgap += HEIGHT(client) + GAPIH*gap;
-	}
 }
 
 void
@@ -600,7 +520,7 @@ unmanage(Client *c, int destroyed)
 					XA_WINDOW, 32, PropModeAppend,
 					(unsigned char *)&client->win, 1);
 
-	arrange(m);
+	tile(m);
 }
 
 void
@@ -619,8 +539,8 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADDING + 4, 0, DefaultDepth(dpy, screen),
-				CopyFromParent, DefaultVisual(dpy, screen),
+		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADDING + 4, 0, DefaultDepth(dpy, DefaultScreen(dpy)),
+				CopyFromParent, DefaultVisual(dpy, DefaultScreen(dpy)),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor);
 		XMapRaised(dpy, m->barwin);

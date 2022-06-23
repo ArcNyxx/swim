@@ -11,18 +11,10 @@
 #include "act.h"
 #include "conv.h"
 #include "config.h"
+#include "func.h"
 #include "struct.h"
+#include "tile.h"
 #include "util.h"
-
-void arrange(Monitor *m);
-void focus(Client *c);
-Client *nexttiled(Client *c);
-void pop(Client *);
-void restack(Monitor *m);
-int sendevent(Client *c, Atom proto);
-void sendmon(Client *c, Monitor *m);
-void unfocus(Client *c, int setfocus);
-void updatebarpos(Monitor *m);
 
 extern Display *dpy;
 extern Monitor *selmon, *mons;
@@ -75,7 +67,7 @@ void
 incnmaster(const Arg arg)
 {
 	selmon->nmaster = MAX(selmon->nmaster + arg.n, 1);
-	arrange(selmon);
+	tile(selmon);
 }
 
 void
@@ -102,7 +94,7 @@ togglegaps(const Arg arg)
 {
 	extern int gap;
 	gap = !gap;
-	arrange(selmon);
+	tile(selmon);
 }
 
 void
@@ -113,7 +105,7 @@ setmfact(const Arg arg)
 
 	if (newmfact >= 5 && newmfact <= 95) {
 		selmon->mfact = newmfact;
-		arrange(selmon);
+		tile(selmon);
 	}
 }
 
@@ -144,7 +136,7 @@ tag(const Arg arg)
 	if (selmon->sel != NULL && (arg.n & TAG) != 0) {
 		selmon->sel->tags = arg.n & TAG;
 		focus(NULL);
-		arrange(selmon);
+		tile(selmon);
 	}
 }
 
@@ -162,7 +154,7 @@ togglebar(const Arg arg)
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx,
 			selmon->by, selmon->ww, PADDING);
-	arrange(selmon);
+	tile(selmon);
 }
 
 void
@@ -173,7 +165,7 @@ toggletag(const Arg arg)
 			(newtags = selmon->sel->tags ^ (arg.n & TAG)) != 0) {
 		selmon->sel->tags = newtags;
 		focus(NULL);
-		arrange(selmon);
+		tile(selmon);
 	}
 }
 
@@ -184,7 +176,7 @@ toggleview(const Arg arg)
 	if ((newtags = selmon->tags ^ (arg.n & TAG)) != 0) {
 		selmon->tags = newtags;
 		focus(NULL);
-		arrange(selmon);
+		tile(selmon);
 	}
 }
 
@@ -194,7 +186,7 @@ view(const Arg arg)
 	if ((arg.n & TAG) != 0) {
 		selmon->tags = arg.n & TAG;
 		focus(NULL);
-		arrange(selmon);
+		tile(selmon);
 	}
 }
 

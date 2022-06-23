@@ -2,6 +2,8 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <X11/Xlib.h>
+
 #include "conv.h"
 #include "struct.h"
 #include "util.h"
