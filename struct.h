@@ -48,7 +48,7 @@ struct client {
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
-	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
+	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Window win;
 };

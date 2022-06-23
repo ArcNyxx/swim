@@ -51,7 +51,6 @@ void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
 void updatebars(void);
 int updategeom(void);
-void updatesizehints(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
@@ -328,7 +327,7 @@ propertynotify(XEvent *evt)
 				(c->isfloating = wintoclient(tr) != NULL)) {
 			arrange(c->mon);
 		} else if (pre->atom == XA_WM_NORMAL_HINTS) {
-			updatesizehints(c);
+			c->hintsvalid = 0;
 		} else if (pre->atom == XA_WM_HINTS) {
 			updatewmhints(c);
 			drawbars();

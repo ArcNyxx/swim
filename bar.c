@@ -65,7 +65,7 @@ drawbar(Monitor *mon)
 						mon->sel->isfixed, 0);
 		} else {
 			drw_setscheme(drw, scheme[ClrNorm]);
-			drw_rect(drw, x, 0, w, PADDING , 1, 1);
+			drw_rect(drw, x, 0, w, PADDING, 1, 1);
 		}
 	}
 	drw_map(drw, mon->barwin, 0, 0, mon->ww, PADDING);
