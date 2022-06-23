@@ -24,11 +24,8 @@ void sendmon(Client *c, Monitor *m);
 void unfocus(Client *c, int setfocus);
 void updatebarpos(Monitor *m);
 
-extern int gap, exec;
-extern bool running;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
-extern Atom wmatom[WMLast];
 
 void
 focusmon(const Arg arg)
@@ -84,6 +81,7 @@ incnmaster(const Arg arg)
 void
 killclient(const Arg arg)
 {
+	extern Atom wmatom[WMLast];
 	if (selmon->sel != NULL && !sendevent(selmon->sel, wmatom[WMDelete])) {
 		XGrabServer(dpy);
 		XKillClient(dpy, selmon->sel->win);
@@ -95,12 +93,14 @@ killclient(const Arg arg)
 void
 quit(const Arg arg)
 {
+	extern bool running;
 	running = false;
 }
 
 void
 togglegaps(const Arg arg)
 {
+	extern int gap;
 	gap = !gap;
 	arrange(selmon);
 }
@@ -132,6 +132,7 @@ spawn(const Arg arg)
 void
 startexec(const Arg arg)
 {
+	extern int exec;
 	exec = 0;
 	XGrabKey(dpy, AnyKey, AnyModifier, RootWindow(dpy, DefaultScreen(dpy)),
 			true, GrabModeAsync, GrabModeAsync);

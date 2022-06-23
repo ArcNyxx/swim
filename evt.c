@@ -2,6 +2,8 @@
  * Copyright (C) 2021-2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <X11/X.h>
+#include <X11/Xutil.h>
 #include <stdbool.h>
 
 #include <X11/keysym.h>
@@ -34,25 +36,23 @@ static void motionnotify     (XEvent *evt);
 static void propertynotify   (XEvent *evt);
 static void unmapnotify      (XEvent *evt);
 
-void unfocus(Client *c, int setfocus);
+void arrange(Monitor *m);
+void configure(Client *c);
+void drawbar(Monitor *m);
+void drawbars(void);
 void focus(Client *c);
+int gettextprop(Window w, Atom atom, char *text, unsigned int size);
+void manage(Window w, XWindowAttributes *wa);
+void resizeclient(Client *c, int x, int y, int w, int h);
 void restack(Monitor *m);
+void setfocus(Client *c);
 void setfullscreen(Client *c, int fullscreen);
 void seturgent(Client *c, int urg);
-int updategeom(void);
-void arrange(Monitor *m);
-void updatebars(void);
-void resizeclient(Client *c, int x, int y, int w, int h);
-void configure(Client *c);
+void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
-void setfocus(Client *c);
-void drawbar(Monitor *m);
-void manage(Window w, XWindowAttributes *wa);
-int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-void drawbars(void);
-void setclientstate(Client *c, long state);
+void updatebars(void);
+int updategeom(void);
 void updatesizehints(Client *c);
-void updatetitle(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
@@ -64,8 +64,7 @@ extern Window root;
 extern Display *dpy;
 extern Monitor *selmon, *mons;
 extern Drw *drw;
-extern Atom netatom[NetLast];
-extern int sw, sh;	   /* X display screen geometry width, height */
+extern Atom wmatom[WMLast], netatom[NetLast];
 
 static void
 buttonpress(XEvent *evt)
@@ -134,6 +133,7 @@ clientmessage(XEvent *evt)
 static void
 configurenotify(XEvent *evt)
 {
+	extern int sw, sh;
 	XConfigureEvent *cfe = &evt->xconfigure;
 	if (cfe->window != root)
 		return;
@@ -337,7 +337,10 @@ propertynotify(XEvent *evt)
 
 		if (pre->atom == XA_WM_NAME ||
 				pre->atom == netatom[NetWMName]) {
-			updatetitle(c);
+			if (!gettextprop(c->win, netatom[NetWMName], c->name,
+					sizeof(c->name)))
+				gettextprop(c->win, XA_WM_NAME, c->name,
+						sizeof(c->name));
 			if (c == c->mon->sel)
 				drawbar(c->mon);
 		}
@@ -352,14 +355,17 @@ unmapnotify(XEvent *evt)
 	Client *client;
 	if ((client = wintoclient(evt->xunmap.window)) != NULL) {
 		if (evt->xunmap.window)
-			setclientstate(client, WithdrawnState);
+			XChangeProperty(dpy, client->win, wmatom[WMState],
+					wmatom[WMState], 32, PropModeReplace,
+					(unsigned char *)(long[])
+					{ WithdrawnState, 0 }, 2);
 		else
 			unmanage(client, 0);
 	}
 }
 
 void
-handle_events(Display *dpy)
+handle_events(void)
 {
 	typedef void (*Event)(XEvent *);
 	static const Event events[LASTEvent] = {

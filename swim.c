@@ -2,6 +2,7 @@
  * Copyright (C) 2021-2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <X11/X.h>
 #include <signal.h>
 #include <sys/wait.h>
 
@@ -54,7 +55,6 @@ void resizeclient(Client *c, int x, int y, int w, int h);
 void restack(Monitor *m);
 int sendevent(Client *c, Atom proto);
 void sendmon(Client *c, Monitor *m);
-void setclientstate(Client *c, long state);
 void setfocus(Client *c);
 void setfullscreen(Client *c, int fullscreen);
 void seturgent(Client *c, int urg);
@@ -68,7 +68,6 @@ void updatebars(void);
 void updateclientlist(void);
 int updategeom(void);
 void updatesizehints(Client *c);
-void updatetitle(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 
@@ -402,7 +401,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 
-	updatetitle(c);
+	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
+		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -438,7 +438,10 @@ manage(Window w, XWindowAttributes *wa)
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
-	setclientstate(c, NormalState);
+	XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState], 32,
+			PropModeReplace, (unsigned char *)(long[])
+			{ NormalState, 0 }, 2);
+
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
@@ -522,15 +525,6 @@ sendmon(Client *c, Monitor *m)
 	c->snext = c->mon->stack; c->mon->stack = c;
 	focus(NULL);
 	arrange(NULL);
-}
-
-void
-setclientstate(Client *c, long state)
-{
-	long data[] = { state, None };
-
-	XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState], 32,
-		PropModeReplace, (unsigned char *)data, 2);
 }
 
 int
@@ -708,7 +702,9 @@ unmanage(Client *c, int destroyed)
 		XSetErrorHandler(xetemp);
 		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc); /* restore border */
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-		setclientstate(c, WithdrawnState);
+		XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState],
+				32, PropModeReplace, (unsigned char *)(long[])
+				{ WithdrawnState, 0 }, 2);
 		XSync(dpy, false);
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
@@ -891,13 +887,6 @@ updatesizehints(Client *c)
 }
 
 void
-updatetitle(Client *c)
-{
-	if (!gettextprop(c->win, netatom[NetWMName], c->name, sizeof c->name))
-		gettextprop(c->win, XA_WM_NAME, c->name, sizeof c->name);
-}
-
-void
 updatewindowtype(Client *c)
 {
 	Atom state = getatomprop(c, netatom[NetWMState]);
@@ -1029,29 +1018,23 @@ main(int argc, char **argv)
 
 scanps:
 	XSync(dpy, false);
+	handle_events();
 
-
-	handle_events(dpy);
-
-	Arg a = { .n = ~0};
-	Monitor *m;
-	size_t iter;
-
-	view(a);
-	for (m = mons; m; m = m->next)
-		while (m->stack)
-			unmanage(m->stack, 0);
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
-	while (mons)
+	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
+		while (mon->stack != NULL)
+			unmanage(mon->stack, 0);
+	while (mons != NULL)
 		cleanupmon(mons);
+
 	XFreeCursor(dpy, cursor);
-	for (iter = 0; iter < LENGTH(colors); iter++)
-		free(scheme[iter]);
+	for (int i = 0; i < LENGTH(colors); ++i)
+		free(scheme[i]);
+
 	XDestroyWindow(dpy, wmcheckwin);
 	drw_free(drw);
 	XSync(dpy, false);
 	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
 	XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-
 	XCloseDisplay(dpy);
 }

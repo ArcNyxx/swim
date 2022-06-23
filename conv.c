@@ -5,7 +5,6 @@
 #include "conv.h"
 #include "struct.h"
 #include "util.h"
-#include <X11/Xlib.h>
 
 extern Display *dpy;
 extern Monitor *selmon, *mons;

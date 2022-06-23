@@ -7,6 +7,6 @@
 
 #include <X11/Xlib.h>
 
-void handle_events(Display *dpy);
+void handle_events(void);
 
 #endif /* EVT_H */
