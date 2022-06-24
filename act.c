@@ -36,29 +36,26 @@ focusstack(const Arg arg)
 	if (selmon->sel == NULL || selmon->sel->isfullscreen)
 		return;
 
-	Client *client, *next;
+	Client *cli, *next;
 	if (arg.n > 0) {
-		client = selmon->sel->next;
-		while (client != NULL && !VISIBLE(client))
-			client = client->next;
-		if (client == NULL) {
-			client = selmon->clients;
-			while (client != NULL && !VISIBLE(client))
-				client = client->next;
+		for (cli = selmon->sel->next; cli != NULL &&
+				!VISIBLE(cli); cli = cli->next);
+		if (cli == NULL) {
+			for (cli = selmon->clients; cli != NULL &&
+					!VISIBLE(cli); cli = cli->next);
 		}
 	} else {
-		client = NULL, next = selmon->clients;
+		cli = NULL, next = selmon->clients;
 		for (; next != selmon->sel; next = next->next)
 			if (VISIBLE(next))
-				client = next;
-		if (client == NULL)
+				cli = next;
+		if (cli == NULL)
 			for (; next != NULL; next = next->next)
 				if (VISIBLE(next))
-					client = next;
+					cli = next;
 	}
-
-	if (client != NULL) {
-		focus(client);
+	if (cli != NULL) {
+		focus(cli);
 		restack(selmon);
 	}
 }
@@ -90,19 +87,10 @@ quit(const Arg arg)
 }
 
 void
-togglegaps(const Arg arg)
-{
-	extern int gap;
-	gap = !gap;
-	tile(selmon);
-}
-
-void
 setmfact(const Arg arg)
 {
 	/* arg > 100 will set mfact absolutely */
 	int newmfact = arg.n > 100 ? arg.n - 100 : selmon->mfact + arg.n;
-
 	if (newmfact >= 5 && newmfact <= 95) {
 		selmon->mfact = newmfact;
 		tile(selmon);
@@ -113,7 +101,7 @@ void
 spawn(const Arg arg)
 {
 	if (fork() == 0) {
-		if (dpy)
+		if (dpy != NULL)
 			close(ConnectionNumber(dpy));
 		setsid();
 		execvp(((char *const *)arg.v)[0], (char *const *)arg.v);
@@ -158,6 +146,14 @@ togglebar(const Arg arg)
 }
 
 void
+togglegaps(const Arg arg)
+{
+	extern bool gap;
+	gap = !gap;
+	tile(selmon);
+}
+
+void
 toggletag(const Arg arg)
 {
 	unsigned int newtags;
@@ -193,10 +189,10 @@ view(const Arg arg)
 void
 zoom(const Arg arg)
 {
-	Client *client = selmon->sel;
-	if (client != NULL && client->isfloating)
+	Client *cli = selmon->sel;
+	if (cli != NULL && cli->isfloating)
 		return;
-	if (client != nexttiled(selmon->clients) || (client != NULL &&
-			(client = nexttiled(client->next)) != NULL))
-		pop(client);
+	if (cli != nexttiled(selmon->clients) || (cli != NULL &&
+			(cli = nexttiled(cli->next)) != NULL))
+		pop(cli);
 }
