@@ -67,11 +67,11 @@ buttonpress(XEvent *evt)
 	if (bpe->window == selmon->barwin) {
 		int i = 0, x = 0;
 		do
-			x += TEXTW(drw, tags[i]) + PADDING;
+			x += TEXTW(drw, tags[i]) + PADW;
 		while (bpe->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags))
 			click = ClkTagBar, arg.n = 1 << i;
-		else if (bpe->x > selmon->ww - TEXTW(drw, stext) + PADDING)
+		else if (bpe->x > selmon->ww - TEXTW(drw, stext) + PADW)
 			click = ClkStatusText;
 		else
 			click = ClkWinTitle;
@@ -124,7 +124,7 @@ configurenotify(XEvent *evt)
 	sw = cfe->width, sh = cfe->height;
 
 	if (updategeom() || dirty) {
-		drw_resize(drw, sw, PADDING + 4);
+		drw_resize(drw, sw, PADH);
 		updatebars();
 		for (Monitor *mon = mons; mon != NULL; mon = mon->next) {
 			for (Client *client = mon->clients; client != NULL;
@@ -133,7 +133,7 @@ configurenotify(XEvent *evt)
 					resizeclient(client, mon->mx, mon->my,
 							mon->mw, mon->mh);
 			XMoveResizeWindow(dpy, mon->barwin, mon->wx, mon->by,
-					mon->ww, PADDING + 4);
+					mon->ww, PADH);
 		}
 		focus(NULL);
 		tile(NULL);

@@ -12,7 +12,8 @@
 #define GAPOH 8
 #define GAPOV 8
 
-#define PADDING 16
+#define PADW 16
+#define PADH 20
 
 extern const unsigned int borderw;
 extern const unsigned int mfact;

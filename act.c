@@ -141,7 +141,7 @@ togglebar(const Arg arg)
 	selmon->showbar = !selmon->showbar;
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx,
-			selmon->by, selmon->ww, PADDING);
+			selmon->by, selmon->ww, PADH);
 	tile(selmon);
 }
 

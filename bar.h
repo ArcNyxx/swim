@@ -7,7 +7,7 @@
 
 #include "struct.h"
 
-void drawbar(Monitor *mon);
+void drawbar(const Monitor *mon);
 void drawbars(void);
 
 #endif /* BAR_H */

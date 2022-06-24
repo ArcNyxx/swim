@@ -15,7 +15,7 @@
 static void showhide(Client *cli);
 static void arrange(Monitor *mon);
 
-int gap = 1;
+bool gap = true;
 
 extern Display *dpy;
 extern Monitor *mons;

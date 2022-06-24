@@ -35,13 +35,12 @@ extern Window root;
 void
 cleanupmon(Monitor *mon)
 {
-	Monitor *m;
-
-	if (mon == mons)
+	if (mon == mons) {
 		mons = mons->next;
-	else {
-		for (m = mons; m && m->next != mon; m = m->next);
-		m->next = mon->next;
+	} else {
+		Monitor *iter = mons;
+		for (; iter != NULL && iter->next != mon; iter = iter->next);
+		iter->next = mon->next;
 	}
 	XUnmapWindow(dpy, mon->barwin);
 	XDestroyWindow(dpy, mon->barwin);
@@ -61,14 +60,10 @@ configure(Client *c)
 Monitor *
 createmon(void)
 {
-	Monitor *m;
-
-	m = scalloc(1, sizeof(Monitor));
-	m->tags = 1;
-	m->mfact = mfact;
-	m->nmaster = nmaster;
-	m->showbar = showbar;
-	return m;
+	Monitor *mon = scalloc(1, sizeof(Monitor));
+	mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
+			mon->showbar = showbar;
+	return mon;
 }
 
 void
@@ -222,7 +217,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->x = MAX(c->x, c->mon->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
-		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? PADDING + 4 : c->mon->my);
+		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? PADH : c->mon->my);
 
 	wc.border_width = borderw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -285,10 +280,10 @@ resize(Client *cli, int x, int y, int w, int h)
 	if (y + h + 2*borderw <= mon->wy)
 		y = mon->wy;
 
-	if (w < PADDING + 4)
-		w = PADDING + 4;
-	if (h < PADDING + 4)
-		h = PADDING + 4;
+	if (w < PADH)
+		w = PADH;
+	if (h < PADH)
+		h = PADH;
 
 	if (!resizehints && !cli->isfloating)
 		goto skip_hints;
@@ -324,17 +319,16 @@ skip_hints:
 }
 
 void
-resizeclient(Client *c, int x, int y, int w, int h)
+resizeclient(Client *cli, int x, int y, int w, int h)
 {
-	XWindowChanges wc;
-
-	c->oldx = c->x; c->x = wc.x = x;
-	c->oldy = c->y; c->y = wc.y = y;
-	c->oldw = c->w; c->w = wc.width = w;
-	c->oldh = c->h; c->h = wc.height = h;
-	wc.border_width = c->isfullscreen ? 0 : borderw;
-	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
-	configure(c);
+	XWindowChanges wc = { .border_width = cli->isfullscreen * borderw };
+	cli->oldx = cli->x, cli->x = wc.x = x;
+	cli->oldy = cli->y, cli->y = wc.y = y;
+	cli->oldw = cli->w, cli->w = wc.width = w;
+	cli->oldh = cli->h, cli->h = wc.height = h;
+	XConfigureWindow(dpy, cli->win,
+			CWX | CWY | CWWidth | CWHeight | CWBorderWidth, &wc);
+	configure(cli);
 	XSync(dpy, false);
 }
 
@@ -407,8 +401,8 @@ setfocus(Client *c)
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
-			XA_WINDOW, 32, PropModeReplace,
-			(unsigned char *) &(c->win), 1);
+				XA_WINDOW, 32, PropModeReplace,
+				(unsigned char *)&(c->win), 1);
 	}
 	sendevent(c, wmatom[WMTakeFocus]);
 }
@@ -515,7 +509,7 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADDING + 4, 0, DefaultDepth(dpy, DefaultScreen(dpy)),
+		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADH, 0, DefaultDepth(dpy, DefaultScreen(dpy)),
 				CopyFromParent, DefaultVisual(dpy, DefaultScreen(dpy)),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor);
@@ -530,13 +524,13 @@ updatebarpos(Monitor *m)
 	m->wy = m->my;
 	m->wh = m->mh;
 	if (m->showbar) {
-		m->wh -= PADDING;
+		m->wh -= PADH;
 		if (topbar)
-			m->by = m->wy, m->wy += PADDING;
+			m->by = m->wy, m->wy += PADH;
 		else
 			m->by = m->wy + m->wh;
 	} else
-		m->by = -PADDING;
+		m->by = -PADH;
 }
 
 int
