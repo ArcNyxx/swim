@@ -33,9 +33,9 @@ void drw_resize(Drw *drw, unsigned int w, unsigned int h);
 void drw_free(Drw *drw);
 
 /* Fnt abstraction */
-Fnt *drw_fontset_create(Drw* drw, const char *fonts[], size_t fontcount);
+Fnt *drw_fontset_create(Drw* drw, const char *font);
 void drw_fontset_free(Fnt* set);
-unsigned int drw_fontset_getwidth(Drw *drw, const char *text);
+int drw_fontset_getwidth(Drw *drw, const char *text);
 void drw_font_getexts(Fnt *font, const char *text, unsigned int len, unsigned int *w, unsigned int *h);
 
 /* Colorscheme abstraction */

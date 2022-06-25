@@ -26,13 +26,13 @@ union arg {
 };
 
 struct button {
-	unsigned int click, mask, button;
+	int click, mask, button;
 	void (*func)(const Arg);
 	const Arg arg;
 };
 
 struct key {
-	unsigned int mod;
+	int mod;
 	KeySym keysym;
 	void (*func)(const Arg);
 	const Arg arg;
@@ -40,7 +40,7 @@ struct key {
 
 struct client {
 	char name[256];
-	unsigned int tags;
+	int tags;
 
 	Client *next, *snext;
 	Monitor *mon;
@@ -54,7 +54,7 @@ struct client {
 };
 
 struct monitor {
-	unsigned int mfact, nmaster, tags, showbar;
+	int mfact, nmaster, tags, showbar;
 
 	Client *clients, *stack, *sel;
 	Monitor *next;

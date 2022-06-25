@@ -33,21 +33,6 @@ extern Monitor *mons, *selmon;
 extern Window root;
 
 void
-cleanupmon(Monitor *mon)
-{
-	if (mon == mons) {
-		mons = mons->next;
-	} else {
-		Monitor *iter = mons;
-		for (; iter != NULL && iter->next != mon; iter = iter->next);
-		iter->next = mon->next;
-	}
-	XUnmapWindow(dpy, mon->barwin);
-	XDestroyWindow(dpy, mon->barwin);
-	free(mon);
-}
-
-void
 configure(Client *c)
 {
 	XConfigureEvent evt = { .type = ConfigureNotify, .display = dpy,
@@ -588,7 +573,18 @@ updategeom(void)
 			}
 			if (m == selmon)
 				selmon = mons;
-			cleanupmon(m);
+
+
+			if (m == mons) {
+				mons = mons->next;
+			} else {
+				Monitor *iter = mons;
+				for (; iter != NULL && iter->next != m; iter = iter->next);
+				iter->next = m->next;
+			}
+			XUnmapWindow(dpy, m->barwin);
+			XDestroyWindow(dpy, m->barwin);
+			free(m);
 		}
 		free(unique);
 	} else

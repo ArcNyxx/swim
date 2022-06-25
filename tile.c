@@ -39,24 +39,24 @@ showhide(Client *cli)
 static void
 arrange(Monitor *mon)
 {
-	unsigned int totcli; /* total number of clients */
+	int totcli; /* total number of clients */
 	Client *client = nexttiled(mon->clients);
 	for (totcli = 0; client != NULL; ++totcli)
 		client = nexttiled(client->next);
 	client = nexttiled(mon->clients);
 
-	unsigned int width; /* width of master/fullwidth windows */
+	int width; /* width of master/fullwidth windows */
 	if (totcli > mon->nmaster) /* master and stacking windows separate */
 		width = (mon->ww - 2*GAPOH*gap - GAPIH*gap) * mon->mfact / 100;
 	else /* master takes up entire monitor */
 		width = mon->ww - 2*GAPOH*gap;
 
 	/* master/fullwidth windows handler */
-	unsigned int clinum = 0, totgap = 0; /* client number and spacing */
+	int clinum = 0, totgap = 0; /* client number and spacing */
 	for (; clinum < mon->nmaster && client != NULL; ++clinum,
 			client = nexttiled(client->next)) {
-		unsigned int numdown = MIN(totcli, mon->nmaster) - clinum;
-		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
+		int numdown = MIN(totcli, mon->nmaster) - clinum;
+		int height = (mon->wh - totgap - 2*GAPOV*gap -
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap, mon->wy + totgap +
 				GAPOV*gap, width - 2*borderw,
@@ -69,8 +69,8 @@ arrange(Monitor *mon)
 
 	/* stacking windows handler */
 	for (; client != NULL; ++clinum, client = nexttiled(client->next)) {
-		unsigned int numdown = totcli - clinum;
-		unsigned int height = (mon->wh - totgap - 2*GAPOV*gap -
+		int numdown = totcli - clinum;
+		int height = (mon->wh - totgap - 2*GAPOV*gap -
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
 				mon->wy + totgap + GAPOH*gap,

@@ -16,15 +16,15 @@
 	{ MODKEY | ControlMask | ShiftMask, keysym, toggletag,                \
 			{ .n = 1 << shift } }
 
-const unsigned int borderw = 1;  /* border width of windows */
-const unsigned int mfact   = 50; /* percentage factor of master area */
-const unsigned int nmaster = 1;  /* number of clients in master area */
-const unsigned int snap    = 32; /* mouse functions snap boundary */
-const int showbar          = 1;  /* show status bar */
-const int topbar           = 0;  /* status bar on top */
-const int resizehints      = 0;  /* enable client resize hints */
+const int borderw     = 1;  /* border width of windows */
+const int mfact       = 50; /* percentage factor of master area */
+const int nmaster     = 1;  /* number of clients in master area */
+const int snap        = 32; /* mouse functions snap boundary */
+const int showbar     = 1;  /* show status bar */
+const int topbar      = 0;  /* status bar on top */
+const int resizehints = 0;  /* enable client resize hints */
 
-const char *fonts[1]     = { "monospace:size=10" };
+const char *font         = "monospace:size=10";
 const char *tags[9]      = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 const char *colors[2][3] = {
 	[ClrNorm] = { "#bbbbbb", "#222222", "#444444" },

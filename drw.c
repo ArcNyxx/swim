@@ -116,21 +116,15 @@ xfont_free(Fnt *font)
 }
 
 Fnt*
-drw_fontset_create(Drw* drw, const char *fonts[], size_t fontcount)
+drw_fontset_create(Drw* drw, const char *font)
 {
-	Fnt *cur, *ret = NULL;
-	size_t i;
-
-	if (!drw || !fonts)
+	Fnt *fnt = NULL;
+	if (!drw || !font)
 		return NULL;
 
-	for (i = 1; i <= fontcount; i++) {
-		if ((cur = xfont_create(drw, fonts[fontcount - i], NULL))) {
-			cur->next = ret;
-			ret = cur;
-		}
-	}
-	return (drw->fonts = ret);
+	if ((fnt = xfont_create(drw, font, NULL)))
+		fnt->next = NULL;
+	return drw->fonts = fnt;
 }
 
 void
@@ -209,7 +203,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 	Fnt *usedfont, *curfont, *nextfont;
 	size_t i, len;
 	int utf8strlen, utf8charlen, render = x || y || w || h;
-	long utf8codepoint = 0;
+	int utf8codepoint = 0;
 	const char *utf8str;
 	FcCharSet *fccharset;
 	FcPattern *fcpattern;
@@ -340,7 +334,7 @@ drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h)
 	XSync(drw->dpy, False);
 }
 
-unsigned int
+int
 drw_fontset_getwidth(Drw *drw, const char *text)
 {
 	if (!drw || !drw->fonts || !text)

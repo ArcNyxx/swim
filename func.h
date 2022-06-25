@@ -9,7 +9,6 @@
 
 #include "struct.h"
 
-void cleanupmon(Monitor *mon);
 void configure(Client *c);
 Monitor *createmon(void);
 void detach(Client *c);

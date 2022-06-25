@@ -15,15 +15,15 @@
 #define PADW 16
 #define PADH 20
 
-extern const unsigned int borderw;
-extern const unsigned int mfact;
-extern const unsigned int nmaster;
-extern const unsigned int snap;
+extern const int borderw;
+extern const int mfact;
+extern const int nmaster;
+extern const int snap;
 extern const int showbar;
 extern const int topbar;
 extern const int resizehints;
 
-extern const char *fonts[1];
+extern const char *font;
 extern const char *tags[9];
 extern const char *colors[2][3];
 

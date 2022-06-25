@@ -84,7 +84,7 @@ buttonpress(XEvent *evt)
 
 	for (int i = 0; i < LENGTH(buttons); ++i)
 		if (CLEAN(buttons[i].mask) == CLEAN(bpe->state) &&
-				buttons[i].button == bpe->button &&
+				buttons[i].button == (int)bpe->button &&
 				buttons[i].click == click &&
 				buttons[i].func != NULL) {
 			if (click == ClkTagBar && buttons[i].arg.n == 0)
@@ -102,8 +102,8 @@ clientmessage(XEvent *evt)
 	if ((client = wintoclient(cme->window)) == NULL)
 		return;
 	if (cme->message_type == netatom[NetWMState]) {
-		if (cme->data.l[1] == netatom[NetWMFullscreen] ||
-				cme->data.l[2] == netatom[NetWMFullscreen])
+		if (cme->data.l[1] == (long)netatom[NetWMFullscreen] ||
+				cme->data.l[2] == (long)netatom[NetWMFullscreen])
 			setfullscreen(client, (!client->isfullscreen &&
 					cme->data.l[0] == 2) ||
 					cme->data.l[0] == 1);

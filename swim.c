@@ -29,9 +29,7 @@
 #include "util.h"
 #include "xerr.h"
 
-static void sigchld(int null);
-
-int sw, sh;	   /* X display screen geometry width, height */
+int sw, sh;
 Atom wmatom[WMLast], netatom[NetLast];
 Cursor cursor;
 Clr **scheme;
@@ -40,14 +38,6 @@ Drw *drw;
 Monitor *mons, *selmon;
 Window root;
 
-static void
-sigchld(int null)
-{
-	if (signal(SIGCHLD, sigchld) == SIG_ERR)
-		die("can't install SIGCHLD handler:");
-	while (0 < waitpid(-1, NULL, WNOHANG));
-}
-
 int
 main(void)
 {
@@ -55,14 +45,12 @@ main(void)
 		die("swim: unable to open display\n");
 	chkwm(dpy);
 
-	sigchld(0); /* reap zombies */
-
 	root = RootWindow(dpy, DefaultScreen(dpy));
 	sw = DisplayWidth(dpy, DefaultScreen(dpy));
 	sh = DisplayHeight(dpy, DefaultScreen(dpy));
 
 	drw = drw_create(dpy, DefaultScreen(dpy), root, sw, sh);
-	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
+	if (!drw_fontset_create(drw, font))
 		die("swim: unable to create fonts\n");
 
 	updategeom();
@@ -150,22 +138,5 @@ main(void)
 scanps:
 	XSync(dpy, false);
 	handle_events();
-
-	XUngrabKey(dpy, AnyKey, AnyModifier, root);
-	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
-		while (mon->stack != NULL)
-			unmanage(mon->stack, 0);
-	while (mons != NULL)
-		cleanupmon(mons);
-
-	XFreeCursor(dpy, cursor);
-	for (int i = 0; i < LENGTH(colors); ++i)
-		free(scheme[i]);
-
-	XDestroyWindow(dpy, wmcheckwin);
-	drw_free(drw);
-	XSync(dpy, false);
-	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
-	XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	XCloseDisplay(dpy);
 }
