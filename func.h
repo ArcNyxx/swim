@@ -14,7 +14,6 @@ void detach(Client *c);
 void detachstack(Client *c);
 void focus(Client *c);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-void manage(Window w, XWindowAttributes *wa);
 void resize(Client *c, int x, int y, int w, int h);
 void resizeclient(Client *c, int x, int y, int w, int h);
 void restack(Monitor *m);
@@ -26,6 +25,7 @@ void unfocus(Client *c, int setfocus);
 void updatebarpos(Monitor *m);
 void updatebars(void);
 int updategeom(void);
+void updatesizehints(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 

@@ -12,6 +12,7 @@
 #include "xerr.h"
 
 static int (*xeorig)(Display *, XErrorEvent *);
+static int xerror(Display *dpy, XErrorEvent *evt);
 
 static int
 xchkwm(Display *dpy, XErrorEvent *evt)
@@ -20,13 +21,7 @@ xchkwm(Display *dpy, XErrorEvent *evt)
 	return 1;
 }
 
-int
-xetemp(Display *dpy, XErrorEvent *evt)
-{
-	return 0;
-}
-
-int
+static int
 xerror(Display *dpy, XErrorEvent *evt)
 {
 	switch (evt->error_code) {

@@ -51,6 +51,9 @@ extern Window root;
 extern Drw *drw;
 extern Atom wmatom[WMLast], netatom[NetLast];
 
+extern int sw;
+extern Clr **scheme;
+
 static void
 unmanage(Client *cli, bool dest)
 {
@@ -300,10 +303,71 @@ static void
 maprequest(XEvent *evt)
 {
 	static XWindowAttributes wa;
-	if (XGetWindowAttributes(dpy, evt->xmaprequest.window, &wa) &&
-			!wa.override_redirect &&
-			wintoclient(evt->xmaprequest.window) == NULL)
-		manage(evt->xmaprequest.window, &wa);
+	Window win = evt->xmaprequest.window;
+	if (!XGetWindowAttributes(dpy, win, &wa) ||
+			wa.override_redirect || wintoclient(win) != NULL)
+		return;
+
+	Client *cli = scalloc(1, sizeof(Client));
+	cli->x = cli->oldx = wa.x;
+	cli->y = cli->oldy = wa.y;
+	cli->w = cli->oldw = wa.width;
+	cli->h = cli->oldh = wa.height;
+	cli->win = win;
+
+	if (!gettextprop(cli->win, netatom[NetWMName], cli->name,
+			sizeof(cli->name)))
+		gettextprop(cli->win, netatom[NetWMName], cli->name,
+				sizeof(cli->name));
+
+	Window trans;
+	Client *transc;
+	if (XGetTransientForHint(dpy, win, &trans) &&
+			(transc = wintoclient(trans)) != NULL)
+		cli->mon = transc->mon, cli->tags = transc->tags;
+	else
+		cli->mon = selmon, cli->tags = cli->mon->tags;
+
+	if (cli->x + WIDTH(cli) > cli->mon->mx + cli->mon->mw)
+		cli->x = cli->mon->mx + cli->mon->mw - WIDTH(cli);
+	if (cli->y + HEIGHT(cli) > cli->mon->my + cli->mon->mh)
+		cli->y = cli->mon->my + cli->mon->mw - HEIGHT(cli);
+	cli->x = MAX(cli->x, cli->mon->mx);
+	cli->y = MAX(cli->y, ((cli->mon->by == cli->mon->my) &&
+			(cli->x + (cli->w / 2) >= cli->mon->wx) &&
+			(cli->x + (cli->w / 2) < cli->mon->wx + cli->mon->ww))
+			? PADH : cli->mon->my);
+
+	XConfigureWindow(dpy, win, CWBorderWidth,
+			&(XWindowChanges){ .border_width = borderw });
+	XSetWindowBorder(dpy, win, scheme[ClrNorm][ColBorder].pixel);
+	configure(cli);
+	updatewindowtype(cli); updatesizehints(cli); updatewmhints(cli);
+	XSelectInput(dpy, win, EnterWindowMask | FocusChangeMask |
+			PropertyChangeMask | StructureNotifyMask);
+	grabbuttons(dpy, cli, 0);
+
+	if (!cli->isfloating)
+		cli->isfloating = cli->oldstate = trans != 0 || cli->isfixed;
+	if (cli->isfloating)
+		XRaiseWindow(dpy, win);
+
+	cli->next = cli->mon->clients, cli->mon->clients = cli;
+	cli->snext = cli->mon->stack, cli->mon->stack = cli;
+
+	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
+			PropModeAppend, (unsigned char *)&cli->win, 1);
+	XMoveResizeWindow(dpy, win, cli->x + 2*sw, cli->y, cli->w, cli->h);
+	XChangeProperty(dpy, win, wmatom[WMState], wmatom[WMState], 32,
+			PropModeReplace, (unsigned char *)(long[])
+			{ NormalState, 0 }, 2);
+
+	if (cli->mon == selmon)
+		unfocus(selmon->sel, 0);
+	cli->mon->sel = cli;
+	tile(cli->mon);
+	XMapWindow(dpy, cli->win);
+	focus(NULL);
 }
 
 static void
