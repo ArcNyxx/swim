@@ -32,8 +32,8 @@ scalloc(size_t nmemb, size_t size)
 	return ptr;
 }
 
-void *
-srealloc(void *ptr, size_t size)
+void
+*srealloc(void *ptr, size_t size)
 {
 	if ((ptr = realloc(ptr, size)) == NULL)
 		die("swim: unable to allocate memory");

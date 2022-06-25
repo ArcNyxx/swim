@@ -6,18 +6,22 @@
 
 include config.mk
 
-SRC = act.c config.c drw.c grab.c swim.c util.c xerr.c
-HEAD = act.h config.h drw.h grab.h struct.h util.h xerr.h
+SRC = drw.c swim.c util.c xerr.c
+HEAD = drw.h struct.h util.h xerr.h
 OBJ = $(SRC:.c=.o)
 
 all: swim
 
 options:
 	@echo swim build options:
-	@echo "CFLAGS  = $(CFLAGS)"
-	@echo "LDFLAGS = $(LDFLAGS)"
+	@echo "COMPILER = $(CC)"
+	@echo "CFLAGS   = $(CFLAGS)"
+	@echo "LDFLAGS  = $(LDFLAGS)"
 
 $(OBJ): $(HEAD) config.h config.mk
+
+config.h:
+	cp config.def.h $@
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<
