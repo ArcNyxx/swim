@@ -29,7 +29,6 @@
 #include "util.h"
 #include "xerr.h"
 
-static long getstate(Window win);
 static void sighandle(int null);
 
 int sw, sh;

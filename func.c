@@ -8,6 +8,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xutil.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
@@ -32,24 +33,7 @@ extern Drw *drw;
 extern Monitor *mons, *selmon;
 extern Window root;
 
-static Atom getatomprop(Client *c, Atom prop);
 static void updatesizehints(Client *c);
-
-static Atom
-getatomprop(Client *c, Atom prop)
-{
-	int di;
-	unsigned long dl;
-	unsigned char *p = NULL;
-	Atom da, atom = None;
-
-	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, false, XA_ATOM,
-		&da, &di, &dl, &dl, &p) == Success && p) {
-		atom = *(Atom *)p;
-		XFree(p);
-	}
-	return atom;
-}
 
 void
 updatesizehints(Client *c)
@@ -573,11 +557,22 @@ updategeom(void)
 void
 updatewindowtype(Client *cli)
 {
-	if (getatomprop(cli, netatom[NetWMState]) == netatom[NetWMFullscreen])
-		setfullscreen(cli, 1);
-	if (getatomprop(cli, netatom[NetWMWindowType]) ==
-			netatom[NetWMWindowTypeDialog])
-		cli->isfloating = 1;
+	unsigned long null;
+	unsigned char *ptr;
+	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMState], 0,
+			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
+			&null, &null, &ptr) && ptr != NULL) {
+		if (*(Atom *)ptr == netatom[NetWMFullscreen])
+			setfullscreen(cli, true);
+		XFree(ptr);
+	}
+	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMWindowType], 0,
+			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
+			&null, &null, &ptr) && ptr != NULL) {
+		if (*(Atom *)ptr == netatom[NetWMWindowTypeDialog])
+			cli->isfloating = true;
+		XFree(ptr);
+	}
 }
 
 void
@@ -591,10 +586,7 @@ updatewmhints(Client *c)
 			XSetWMHints(dpy, c->win, wmh);
 		} else
 			c->isurgent = (wmh->flags & XUrgencyHint) ? 1 : 0;
-		if (wmh->flags & InputHint)
-			c->neverfocus = !wmh->input;
-		else
-			c->neverfocus = 0;
+		c->neverfocus = wmh->flags & InputHint ? !wmh->input : 0;
 		XFree(wmh);
 	}
 }
