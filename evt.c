@@ -58,16 +58,8 @@ unmanage(Client *cli, bool dest)
 	detachstack(cli);
 	if (!dest) {
 		XGrabServer(dpy);
-		XSetErrorHandler(xetemp);
-		XConfigureWindow(dpy, cli->win, CWBorderWidth,
-				&(XWindowChanges){ .border_width = borderw });
-		XUngrabButton(dpy, AnyButton, AnyModifier, cli->win);
-		XChangeProperty(dpy, cli->win, wmatom[WMState],
-				wmatom[WMState], 32, PropModeReplace,
-				(unsigned char *)(long[]){ WithdrawnState, 0 },
-				2);
+		XKillClient(dpy, cli->win);
 		XSync(dpy, false);
-		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
 
