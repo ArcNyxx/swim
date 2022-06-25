@@ -131,8 +131,19 @@ tag(const Arg arg)
 void
 tagmon(const Arg arg)
 {
-	if (selmon->sel != NULL && mons->next != NULL)
-		sendmon(selmon->sel, dirtomon(arg.n));
+	Monitor *mon;
+	if (selmon->sel != NULL && mons->next != NULL &&
+			(mon = dirtomon(arg.n)) != NULL) {
+		Client *cli = selmon->sel;
+		unfocus(cli, 1);
+		detach(cli);
+		detachstack(cli);
+		cli->mon = mon, cli->tags = mon->tags;
+		cli->next = cli->mon->clients; cli->mon->clients = cli;
+		cli->snext = cli->mon->stack; cli->mon->stack = cli;
+		focus(NULL);
+		tile(NULL);
+	}
 }
 
 void
@@ -193,6 +204,10 @@ zoom(const Arg arg)
 	if (cli != NULL && cli->isfloating)
 		return;
 	if (cli != nexttiled(selmon->clients) || (cli != NULL &&
-			(cli = nexttiled(cli->next)) != NULL))
-		pop(cli);
+			(cli = nexttiled(cli->next)) != NULL)) {
+		detach(cli);
+		cli->next = cli->mon->clients, cli->mon->clients = cli;
+		focus(cli);
+		tile(cli->mon);
+	}
 }

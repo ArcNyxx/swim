@@ -5,6 +5,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <stdbool.h>
+
 #include "struct.h"
 
 #define GAPIH 12
@@ -19,9 +21,9 @@ extern const int borderw;
 extern const int mfact;
 extern const int nmaster;
 extern const int snap;
-extern const int showbar;
-extern const int topbar;
-extern const int resizehints;
+extern const bool rhints;
+extern const bool showbar;
+extern const bool topbar;
 
 extern const char *font;
 extern const char *tags[9];

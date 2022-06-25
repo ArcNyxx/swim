@@ -2,6 +2,8 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <stdbool.h>
+
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
@@ -16,13 +18,13 @@
 	{ MODKEY | ControlMask | ShiftMask, keysym, toggletag,                \
 			{ .n = 1 << shift } }
 
-const int borderw     = 1;  /* border width of windows */
-const int mfact       = 50; /* percentage factor of master area */
-const int nmaster     = 1;  /* number of clients in master area */
-const int snap        = 32; /* mouse functions snap boundary */
-const int showbar     = 1;  /* show status bar */
-const int topbar      = 0;  /* status bar on top */
-const int resizehints = 0;  /* enable client resize hints */
+const int  borderw = 1;  /* border width of windows */
+const int  mfact   = 50; /* percentage factor of master area */
+const int  nmaster = 1;  /* number of clients in master area */
+const int  snap    = 32; /* mouse functions snap boundary */
+const bool rhints  = 0;  /* enable client resize hints */
+const bool showbar = 1;  /* show status bar */
+const bool topbar  = 1;  /* status bar on top */
 
 const char *font         = "monospace:size=10";
 const char *tags[9]      = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };

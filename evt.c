@@ -2,9 +2,8 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
-#include <X11/X.h>
-#include <X11/Xutil.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -23,6 +22,9 @@
 #include "grab.h"
 #include "struct.h"
 #include "util.h"
+#include "xerr.h"
+
+static void unmanage(Client *cli, bool dest);
 
 static void buttonpress      (XEvent *evt);
 static void clientmessage    (XEvent *evt);
@@ -48,6 +50,39 @@ extern Monitor *selmon, *mons;
 extern Window root;
 extern Drw *drw;
 extern Atom wmatom[WMLast], netatom[NetLast];
+
+static void
+unmanage(Client *cli, bool dest)
+{
+	detach(cli);
+	detachstack(cli);
+	if (!dest) {
+		XGrabServer(dpy);
+		XSetErrorHandler(xetemp);
+		XConfigureWindow(dpy, cli->win, CWBorderWidth,
+				&(XWindowChanges){ .border_width = borderw });
+		XUngrabButton(dpy, AnyButton, AnyModifier, cli->win);
+		XChangeProperty(dpy, cli->win, wmatom[WMState],
+				wmatom[WMState], 32, PropModeReplace,
+				(unsigned char *)(long[]){ WithdrawnState, 0 },
+				2);
+		XSync(dpy, false);
+		XSetErrorHandler(xerror);
+		XUngrabServer(dpy);
+	}
+
+	Monitor *mon = cli->mon;
+	free(cli);
+	focus(NULL);
+
+	XDeleteProperty(dpy, root, netatom[NetClientList]);
+	for (Monitor *itm = mons; itm != NULL; itm = itm->next)
+		for (Client *itc = itm->clients; itc != NULL; itc = itc->next)
+			XChangeProperty(dpy, root, netatom[NetClientList],
+					XA_WINDOW, 32, PropModeAppend,
+					(unsigned char *)&itc->win, 1);
+	tile(mon);
+}
 
 static void
 buttonpress(XEvent *evt)

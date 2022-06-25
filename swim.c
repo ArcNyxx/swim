@@ -28,6 +28,7 @@
 #include "util.h"
 #include "xerr.h"
 
+static long getstate(Window w);
 static void sighandle(int null);
 
 int sw, sh;
@@ -42,6 +43,24 @@ Window root;
 static void
 sighandle(int null)
 { }
+
+long
+getstate(Window w)
+{
+	int format;
+	long result = -1;
+	unsigned char *p = NULL;
+	unsigned long n, extra;
+	Atom real;
+
+	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, false, wmatom[WMState],
+		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
+		return -1;
+	if (n != 0)
+		result = *p;
+	XFree(p);
+	return result;
+}
 
 int
 main(void)

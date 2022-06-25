@@ -83,6 +83,13 @@ arrange(Monitor *mon)
 	}
 }
 
+Client *
+nexttiled(Client *cli)
+{
+	for (; cli && (cli->isfloating || !VISIBLE(cli)); cli = cli->next);
+	return cli;
+}
+
 void
 tile(Monitor *mon)
 {

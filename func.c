@@ -32,6 +32,69 @@ extern Drw *drw;
 extern Monitor *mons, *selmon;
 extern Window root;
 
+static Atom getatomprop(Client *c, Atom prop);
+static void updatesizehints(Client *c);
+
+static Atom
+getatomprop(Client *c, Atom prop)
+{
+	int di;
+	unsigned long dl;
+	unsigned char *p = NULL;
+	Atom da, atom = None;
+
+	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, false, XA_ATOM,
+		&da, &di, &dl, &dl, &p) == Success && p) {
+		atom = *(Atom *)p;
+		XFree(p);
+	}
+	return atom;
+}
+
+void
+updatesizehints(Client *c)
+{
+	long msize;
+	XSizeHints size;
+
+	if (!XGetWMNormalHints(dpy, c->win, &size, &msize))
+		/* size is uninitialized, ensure that size.flags aren't used */
+		size.flags = PSize;
+	if (size.flags & PBaseSize) {
+		c->basew = size.base_width;
+		c->baseh = size.base_height;
+	} else if (size.flags & PMinSize) {
+		c->basew = size.min_width;
+		c->baseh = size.min_height;
+	} else
+		c->basew = c->baseh = 0;
+	if (size.flags & PResizeInc) {
+		c->incw = size.width_inc;
+		c->inch = size.height_inc;
+	} else
+		c->incw = c->inch = 0;
+	if (size.flags & PMaxSize) {
+		c->maxw = size.max_width;
+		c->maxh = size.max_height;
+	} else
+		c->maxw = c->maxh = 0;
+	if (size.flags & PMinSize) {
+		c->minw = size.min_width;
+		c->minh = size.min_height;
+	} else if (size.flags & PBaseSize) {
+		c->minw = size.base_width;
+		c->minh = size.base_height;
+	} else
+		c->minw = c->minh = 0;
+	if (size.flags & PAspect) {
+		c->mina = (float)size.min_aspect.y / size.min_aspect.x;
+		c->maxa = (float)size.max_aspect.x / size.max_aspect.y;
+	} else
+		c->maxa = c->mina = 0.0;
+	c->isfixed = (c->maxw && c->maxh && c->maxw == c->minw && c->maxh == c->minh);
+	c->hintsvalid = 1;
+}
+
 void
 configure(Client *c)
 {
@@ -40,15 +103,6 @@ configure(Client *c)
 			.y = c->y, .width = c->w, .height = c->h, .above = 0,
 			.border_width = borderw, .override_redirect = false };
 	XSendEvent(dpy, c->win, false, StructureNotifyMask, (XEvent *)&evt);
-}
-
-Monitor *
-createmon(void)
-{
-	Monitor *mon = scalloc(1, sizeof(Monitor));
-	mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
-			mon->showbar = showbar;
-	return mon;
 }
 
 void
@@ -97,40 +151,6 @@ focus(Client *c)
 	}
 	selmon->sel = c;
 	drawbars();
-}
-
-Atom
-getatomprop(Client *c, Atom prop)
-{
-	int di;
-	unsigned long dl;
-	unsigned char *p = NULL;
-	Atom da, atom = None;
-
-	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, false, XA_ATOM,
-		&da, &di, &dl, &dl, &p) == Success && p) {
-		atom = *(Atom *)p;
-		XFree(p);
-	}
-	return atom;
-}
-
-long
-getstate(Window w)
-{
-	int format;
-	long result = -1;
-	unsigned char *p = NULL;
-	unsigned long n, extra;
-	Atom real;
-
-	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, false, wmatom[WMState],
-		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
-		return -1;
-	if (n != 0)
-		result = *p;
-	XFree(p);
-	return result;
 }
 
 int
@@ -234,22 +254,6 @@ manage(Window w, XWindowAttributes *wa)
 	focus(NULL);
 }
 
-Client *
-nexttiled(Client *c)
-{
-	for (; c && (c->isfloating || !VISIBLE(c)); c = c->next);
-	return c;
-}
-
-void
-pop(Client *c)
-{
-	detach(c);
-	c->next = c->mon->clients; c->mon->clients = c;
-	focus(c);
-	tile(c->mon);
-}
-
 void
 resize(Client *cli, int x, int y, int w, int h)
 {
@@ -270,7 +274,7 @@ resize(Client *cli, int x, int y, int w, int h)
 	if (h < PADH)
 		h = PADH;
 
-	if (!resizehints && !cli->isfloating)
+	if (!rhints && !cli->isfloating)
 		goto skip_hints;
 
 	if (!cli->hintsvalid)
@@ -337,22 +341,6 @@ restack(Monitor *mon)
 
 	XEvent evt;
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &evt));
-}
-
-void
-sendmon(Client *c, Monitor *m)
-{
-	if (c->mon == m)
-		return;
-	unfocus(c, 1);
-	detach(c);
-	detachstack(c);
-	c->mon = m;
-	c->tags = m->tags; /* assign tags of target monitor */
-	c->next = c->mon->clients; c->mon->clients = c;
-	c->snext = c->mon->stack; c->mon->stack = c;
-	focus(NULL);
-	tile(NULL);
 }
 
 int
@@ -444,41 +432,6 @@ unfocus(Client *c, int setfocus)
 }
 
 void
-unmanage(Client *c, int destroyed)
-{
-	Monitor *m = c->mon;
-	XWindowChanges wc;
-
-	detach(c);
-	detachstack(c);
-	if (!destroyed) {
-		wc.border_width = borderw;
-		XGrabServer(dpy); /* avoid race conditions */
-		XSetErrorHandler(xetemp);
-		XConfigureWindow(dpy, c->win, CWBorderWidth, &wc); /* restore border */
-		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-		XChangeProperty(dpy, c->win, wmatom[WMState], wmatom[WMState],
-				32, PropModeReplace, (unsigned char *)(long[])
-				{ WithdrawnState, 0 }, 2);
-		XSync(dpy, false);
-		XSetErrorHandler(xerror);
-		XUngrabServer(dpy);
-	}
-	free(c);
-	focus(NULL);
-
-	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
-		for (Client *client = mon->clients; client != NULL;
-				client = client->next)
-			XChangeProperty(dpy, root, netatom[NetClientList],
-					XA_WINDOW, 32, PropModeAppend,
-					(unsigned char *)&client->win, 1);
-
-	tile(m);
-}
-
-void
 updatebars(void)
 {
 	Monitor *m;
@@ -543,10 +496,17 @@ updategeom(void)
 		/* new monitors if nn > n */
 		for (i = n; i < nn; i++) {
 			for (m = mons; m && m->next; m = m->next);
-			if (m)
-				m->next = createmon();
-			else
-				mons = createmon();
+			if (m) {
+				Monitor *mon = scalloc(1, sizeof(Monitor));
+				mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
+						mon->showbar = showbar;
+				m->next = mon;
+			} else {
+				Monitor *mon = scalloc(1, sizeof(Monitor));
+				mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
+						mon->showbar = showbar;
+				mons = mon;
+			}
 		}
 		for (i = 0, m = mons; i < nn && m; m = m->next, i++)
 			if (i >= n
@@ -590,8 +550,12 @@ updategeom(void)
 	} else
 #endif /* XINERAMA */
 	{ /* default monitor setup */
-		if (!mons)
-			mons = createmon();
+		if (!mons) {
+			Monitor *mon = scalloc(1, sizeof(Monitor));
+			mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
+					mon->showbar = showbar;
+			mons = mon;
+		}
 		if (mons->mw != sw || mons->mh != sh) {
 			dirty = 1;
 			mons->mw = mons->ww = sw;
@@ -604,50 +568,6 @@ updategeom(void)
 		selmon = wintomon(root);
 	}
 	return dirty;
-}
-
-void
-updatesizehints(Client *c)
-{
-	long msize;
-	XSizeHints size;
-
-	if (!XGetWMNormalHints(dpy, c->win, &size, &msize))
-		/* size is uninitialized, ensure that size.flags aren't used */
-		size.flags = PSize;
-	if (size.flags & PBaseSize) {
-		c->basew = size.base_width;
-		c->baseh = size.base_height;
-	} else if (size.flags & PMinSize) {
-		c->basew = size.min_width;
-		c->baseh = size.min_height;
-	} else
-		c->basew = c->baseh = 0;
-	if (size.flags & PResizeInc) {
-		c->incw = size.width_inc;
-		c->inch = size.height_inc;
-	} else
-		c->incw = c->inch = 0;
-	if (size.flags & PMaxSize) {
-		c->maxw = size.max_width;
-		c->maxh = size.max_height;
-	} else
-		c->maxw = c->maxh = 0;
-	if (size.flags & PMinSize) {
-		c->minw = size.min_width;
-		c->minh = size.min_height;
-	} else if (size.flags & PBaseSize) {
-		c->minw = size.base_width;
-		c->minh = size.base_height;
-	} else
-		c->minw = c->minh = 0;
-	if (size.flags & PAspect) {
-		c->mina = (float)size.min_aspect.y / size.min_aspect.x;
-		c->maxa = (float)size.max_aspect.x / size.max_aspect.y;
-	} else
-		c->maxa = c->mina = 0.0;
-	c->isfixed = (c->maxw && c->maxh && c->maxw == c->minw && c->maxh == c->minh);
-	c->hintsvalid = 1;
 }
 
 void

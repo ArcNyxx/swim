@@ -7,6 +7,7 @@
 
 #include "struct.h"
 
+Client *nexttiled(Client *cli);
 void tile(Monitor *mon);
 
 #endif /* TILE_H */
