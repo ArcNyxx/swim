@@ -115,7 +115,7 @@ main(void)
 			PointerMotionMask | PropertyChangeMask |
 			StructureNotifyMask | SubstructureNotifyMask |
 			SubstructureRedirectMask };
-	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &sattrs);
+	XChangeWindowAttributes(dpy, root, CWEventMask | CWCursor, &sattrs);
 	XSelectInput(dpy, root, sattrs.event_mask);
 	grabkeys(dpy);
 	focus(NULL);

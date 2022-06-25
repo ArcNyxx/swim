@@ -136,31 +136,6 @@ focus(Client *c)
 	drawbars();
 }
 
-int
-gettextprop(Window w, Atom atom, char *text, unsigned int size)
-{
-	char **list = NULL;
-	int n;
-	XTextProperty name;
-
-	if (!text || size == 0)
-		return 0;
-	text[0] = '\0';
-	if (!XGetTextProperty(dpy, w, &name, atom) || !name.nitems)
-		return 0;
-	if (name.encoding == XA_STRING)
-		strncpy(text, (char *)name.value, size - 1);
-	else {
-		if (XmbTextPropertyToTextList(dpy, &name, &list, &n) >= Success && n > 0 && *list) {
-			strncpy(text, *list, size - 1);
-			XFreeStringList(list);
-		}
-	}
-	text[size - 1] = '\0';
-	XFree(name.value);
-	return 1;
-}
-
 #ifdef XINERAMA
 static int
 isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
@@ -172,59 +147,6 @@ isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 	return 1;
 }
 #endif /* XINERAMA */
-
-void
-resize(Client *cli, int x, int y, int w, int h)
-{
-	w = MAX(1, w), h = MAX(1, h); /* set minimum */
-
-	Monitor *mon = cli->mon;
-	if (x >= mon->wx + mon->ww)
-		x = mon->wx + mon->ww - WIDTH(cli);
-	if (y >= mon->wy + mon->wh)
-		y = mon->wy + mon->wh - HEIGHT(cli);
-	if (x + w + 2*borderw <= mon->wx)
-		x = mon->wx;
-	if (y + h + 2*borderw <= mon->wy)
-		y = mon->wy;
-
-	if (w < PADH)
-		w = PADH;
-	if (h < PADH)
-		h = PADH;
-
-	if (!rhints && !cli->isfloating)
-		goto skip_hints;
-
-	if (!cli->hintsvalid)
-		updatesizehints(cli);
-
-	bool baseismin = cli->basew == cli->minw && cli->baseh == cli->minh;
-	if (baseismin)
-		w -= cli->basew, h -= cli->baseh;
-	if (cli->mina > 0 && cli->maxa > 0) {
-		if (cli->maxa < (float)w / h)
-			w = h * cli->maxa + 0.5;
-		else if (cli->mina < (float)h / w)
-			h = w * cli->mina + 0.5;
-	}
-	if (!baseismin)
-		w -= cli->basew, h -= cli->baseh;
-	if (cli->incw != 0)
-		w -= w % cli->incw;
-	if (cli->inch != 0)
-		h -= h % cli->inch;
-
-	w = MAX(w + cli->basew, cli->minw), h = MAX(h + cli->baseh, cli->minh);
-	if (cli->maxw != 0)
-		w = MIN(w, cli->maxw);
-	if (cli->maxh != 0)
-		h = MIN(h, cli->maxh);
-
-skip_hints:
-	if (x != cli->x || y != cli->y || w != cli->w || h != cli->h)
-		resizeclient(cli, x, y, w, h);
-}
 
 void
 resizeclient(Client *cli, int x, int y, int w, int h)

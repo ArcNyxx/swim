@@ -12,29 +12,14 @@
 #include "tile.h"
 #include "util.h"
 
-static void showhide(Client *cli);
 static void arrange(Monitor *mon);
+static void resize(Client *cli, int x, int y, int w, int h);
+static void showhide(Client *cli);
 
 bool gap = true;
 
 extern Display *dpy;
 extern Monitor *mons;
-
-static void
-showhide(Client *cli)
-{
-	if (cli == NULL)
-		return;
-	if (VISIBLE(cli)) {
-		XMoveWindow(dpy, cli->win, cli->x, cli->y);
-		if (cli->isfloating && !cli->isfullscreen)
-			resize(cli, cli->x, cli->y, cli->w, cli->h);
-		showhide(cli->snext); /* show clients top down */
-	} else {
-		showhide(cli->snext); /* hide clients bottom up */
-		XMoveWindow(dpy, cli->win, WIDTH(cli) * -2, cli->y);
-	}
-}
 
 static void
 arrange(Monitor *mon)
@@ -80,6 +65,75 @@ arrange(Monitor *mon)
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;
+	}
+}
+
+static void
+resize(Client *cli, int x, int y, int w, int h)
+{
+	w = MAX(1, w), h = MAX(1, h); /* set minimum */
+
+	Monitor *mon = cli->mon;
+	if (x >= mon->wx + mon->ww)
+		x = mon->wx + mon->ww - WIDTH(cli);
+	if (y >= mon->wy + mon->wh)
+		y = mon->wy + mon->wh - HEIGHT(cli);
+	if (x + w + 2*borderw <= mon->wx)
+		x = mon->wx;
+	if (y + h + 2*borderw <= mon->wy)
+		y = mon->wy;
+
+	if (w < PADH)
+		w = PADH;
+	if (h < PADH)
+		h = PADH;
+
+	if (!rhints && !cli->isfloating)
+		goto skip_hints;
+
+	if (!cli->hintsvalid)
+		updatesizehints(cli);
+
+	bool baseismin = cli->basew == cli->minw && cli->baseh == cli->minh;
+	if (baseismin)
+		w -= cli->basew, h -= cli->baseh;
+	if (cli->mina > 0 && cli->maxa > 0) {
+		if (cli->maxa < (float)w / h)
+			w = h * cli->maxa + 0.5;
+		else if (cli->mina < (float)h / w)
+			h = w * cli->mina + 0.5;
+	}
+	if (!baseismin)
+		w -= cli->basew, h -= cli->baseh;
+	if (cli->incw != 0)
+		w -= w % cli->incw;
+	if (cli->inch != 0)
+		h -= h % cli->inch;
+
+	w = MAX(w + cli->basew, cli->minw), h = MAX(h + cli->baseh, cli->minh);
+	if (cli->maxw != 0)
+		w = MIN(w, cli->maxw);
+	if (cli->maxh != 0)
+		h = MIN(h, cli->maxh);
+
+skip_hints:
+	if (x != cli->x || y != cli->y || w != cli->w || h != cli->h)
+		resizeclient(cli, x, y, w, h);
+}
+
+static void
+showhide(Client *cli)
+{
+	if (cli == NULL)
+		return;
+	if (VISIBLE(cli)) {
+		XMoveWindow(dpy, cli->win, cli->x, cli->y);
+		if (cli->isfloating && !cli->isfullscreen)
+			resize(cli, cli->x, cli->y, cli->w, cli->h);
+		showhide(cli->snext); /* show clients top down */
+	} else {
+		showhide(cli->snext); /* hide clients bottom up */
+		XMoveWindow(dpy, cli->win, WIDTH(cli) * -2, cli->y);
 	}
 }
 

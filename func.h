@@ -13,8 +13,6 @@ void configure(Client *c);
 void detach(Client *c);
 void detachstack(Client *c);
 void focus(Client *c);
-int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-void resize(Client *c, int x, int y, int w, int h);
 void resizeclient(Client *c, int x, int y, int w, int h);
 void restack(Monitor *m);
 int sendevent(Client *c, Atom proto);
