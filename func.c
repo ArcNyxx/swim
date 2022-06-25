@@ -23,7 +23,6 @@
 #include "tile.h"
 #include "struct.h"
 #include "util.h"
-#include "xerr.h"
 
 extern int sw, sh;
 extern Atom wmatom[WMLast], netatom[NetLast];

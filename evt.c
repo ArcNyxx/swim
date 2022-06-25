@@ -23,7 +23,6 @@
 #include "grab.h"
 #include "struct.h"
 #include "util.h"
-#include "xerr.h"
 
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void unmanage(Client *cli, bool dest);

@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -28,11 +29,14 @@
 #include "struct.h"
 #include "func.h"
 #include "util.h"
-#include "xerr.h"
 
 #define ATOM(name) XInternAtom(dpy, name, false)
 
 static void sighandle(int null);
+static int xchkwm(Display *dpy, XErrorEvent *evt);
+static int xerror(Display *dpy, XErrorEvent *evt);
+
+static int (*xeorig)(Display *, XErrorEvent *);
 
 int sw, sh;
 Atom wmatom[WMLast], netatom[NetLast];
@@ -48,12 +52,49 @@ sighandle(int null)
 	while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
+static int
+xchkwm(Display *dpy, XErrorEvent *evt)
+{
+	die("swim: another window manager already running\n");
+	return 1;
+}
+
+static int
+xerror(Display *dpy, XErrorEvent *evt)
+{
+	switch (evt->error_code) {
+	case BadMatch:
+		if (evt->request_code != X_ConfigureWindow &&
+				evt->request_code != X_SetInputFocus)
+			break;
+		return 0;
+	case BadDrawable:
+		if (evt->request_code != X_CopyArea &&
+				evt->request_code != X_PolyFillRectangle &&
+				evt->request_code != X_PolySegment &&
+				evt->request_code != X_PolyText8)
+			break;
+		return 0;
+	case BadAccess:
+		if (evt->request_code != X_GrabButton &&
+				evt->request_code != X_GrabKey)
+			break;
+		return 0;
+	case BadWindow:   /* unable to check destroyed window access, */
+		return 0; /* ignored especially on unmapnotify */
+	default:
+		break;
+	}
+	fprintf(stderr, "swim: fatal error: request (%d), error (%d)\n",
+			evt->request_code, evt->error_code);
+	return xeorig(dpy, evt); /* may exit */
+}
+
 int
 main(void)
 {
 	if ((dpy = XOpenDisplay(NULL)) == NULL)
 		die("swim: unable to open display\n");
-	chkwm(dpy);
 
 	root = RootWindow(dpy, DefaultScreen(dpy));
 	sw   = DisplayWidth(dpy, DefaultScreen(dpy));
@@ -66,13 +107,11 @@ main(void)
 	struct sigaction act = { .sa_handler = sighandle };
 	sigemptyset(&act.sa_mask); sigaction(SIGCHLD, &act, NULL);
 
-	updategeom();
 	scheme = scalloc(LENGTH(colors), sizeof(Clr *));
 	for (size_t i = 0; i < LENGTH(colors); i++)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 
-	updatebars();
-	drawbars();
+	updategeom(); updatebars(); drawbars();
 
 	wmatom [WMProtocols]           = ATOM("WM_PROTOCOLS");
 	wmatom [WMDelete]              = ATOM("WM_DELETE_WINDOW");
@@ -99,17 +138,23 @@ main(void)
 			PropModeReplace, (unsigned char *)netatom, NetLast);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
 
+	/* fail if multiple wms due to substructureredirectmask selection */
 	XSetWindowAttributes attrs = { .event_mask = ButtonPressMask |
 			EnterWindowMask | LeaveWindowMask | PointerMotionMask |
 			PropertyChangeMask | StructureNotifyMask |
 			SubstructureNotifyMask | SubstructureRedirectMask,
 			.cursor = XCreateFontCursor(dpy, XC_left_ptr) };
 	XChangeWindowAttributes(dpy, root, CWEventMask | CWCursor, &attrs);
+	xeorig = XSetErrorHandler(xchkwm);
 	XSelectInput(dpy, root, attrs.event_mask);
+	XSync(dpy, false);
+	XSetErrorHandler(xerror);
+	XSync(dpy, false);
+
 	grabkeys(dpy);
 	focus(NULL);
-
 	XSync(dpy, false);
+
 	handle_events();
 	XCloseDisplay(dpy);
 }
