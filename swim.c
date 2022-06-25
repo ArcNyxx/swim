@@ -3,7 +3,6 @@
  * see LICENCE file for licensing information */
 
 #include <signal.h>
-#include <sys/wait.h>
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -29,6 +28,8 @@
 #include "util.h"
 #include "xerr.h"
 
+static void sighandle(int null);
+
 int sw, sh;
 Atom wmatom[WMLast], netatom[NetLast];
 Cursor cursor;
@@ -37,6 +38,10 @@ Display *dpy;
 Drw *drw;
 Monitor *mons, *selmon;
 Window root;
+
+static void
+sighandle(int null)
+{ }
 
 int
 main(void)
@@ -52,6 +57,10 @@ main(void)
 	drw = drw_create(dpy, DefaultScreen(dpy), root, sw, sh);
 	if (!drw_fontset_create(drw, font))
 		die("swim: unable to create fonts\n");
+
+	struct sigaction act = { .sa_handler = sighandle,
+			.sa_flags = SA_NOCLDSTOP, }; sigemptyset(&act.sa_mask);
+	sigaction(SIGCHLD, &act, NULL);
 
 	updategeom();
 

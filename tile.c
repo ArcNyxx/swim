@@ -29,9 +29,9 @@ showhide(Client *cli)
 		XMoveWindow(dpy, cli->win, cli->x, cli->y);
 		if (cli->isfloating && !cli->isfullscreen)
 			resize(cli, cli->x, cli->y, cli->w, cli->h);
-		showhide(cli->next); /* show clients top down */
+		showhide(cli->snext); /* show clients top down */
 	} else {
-		showhide(cli->next); /* hide clients bottom up */
+		showhide(cli->snext); /* hide clients bottom up */
 		XMoveWindow(dpy, cli->win, WIDTH(cli) * -2, cli->y);
 	}
 }
