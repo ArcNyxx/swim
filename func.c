@@ -27,7 +27,6 @@
 
 extern int sw, sh;
 extern Atom wmatom[WMLast], netatom[NetLast];
-extern Cursor cursor;
 extern Clr **scheme;
 extern Display *dpy;
 extern Drw *drw;
@@ -291,7 +290,6 @@ updatebars(void)
 		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADH, 0, DefaultDepth(dpy, DefaultScreen(dpy)),
 				CopyFromParent, DefaultVisual(dpy, DefaultScreen(dpy)),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XDefineCursor(dpy, m->barwin, cursor);
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
 	}
