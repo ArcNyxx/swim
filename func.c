@@ -310,7 +310,7 @@ skip_hints:
 void
 resizeclient(Client *cli, int x, int y, int w, int h)
 {
-	XWindowChanges wc = { .border_width = cli->isfullscreen * borderw };
+	XWindowChanges wc = { .border_width = !cli->isfullscreen * borderw };
 	cli->oldx = cli->x, cli->x = wc.x = x;
 	cli->oldy = cli->y, cli->y = wc.y = y;
 	cli->oldw = cli->w, cli->w = wc.width = w;

@@ -3,6 +3,7 @@
  * see LICENCE file for licensing information */
 
 #include <signal.h>
+#include <sys/wait.h>
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -28,7 +29,7 @@
 #include "util.h"
 #include "xerr.h"
 
-static long getstate(Window w);
+static long getstate(Window win);
 static void sighandle(int null);
 
 int sw, sh;
@@ -42,24 +43,8 @@ Window root;
 
 static void
 sighandle(int null)
-{ }
-
-long
-getstate(Window w)
 {
-	int format;
-	long result = -1;
-	unsigned char *p = NULL;
-	unsigned long n, extra;
-	Atom real;
-
-	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, false, wmatom[WMState],
-		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
-		return -1;
-	if (n != 0)
-		result = *p;
-	XFree(p);
-	return result;
+	while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 int
@@ -77,9 +62,8 @@ main(void)
 	if (!drw_fontset_create(drw, font))
 		die("swim: unable to create fonts\n");
 
-	struct sigaction act = { .sa_handler = sighandle,
-			.sa_flags = SA_NOCLDSTOP, }; sigemptyset(&act.sa_mask);
-	sigaction(SIGCHLD, &act, NULL);
+	struct sigaction act = { .sa_handler = sighandle };
+	sigemptyset(&act.sa_mask); sigaction(SIGCHLD, &act, NULL);
 
 	updategeom();
 
@@ -137,33 +121,6 @@ main(void)
 	grabkeys(dpy);
 	focus(NULL);
 
-	XWindowAttributes attrs;
-	Window win1, win2, *wins = NULL;
-	uint num;
-
-	if (XQueryTree(dpy, root, &win1, &win2, &wins, &num) == 0)
-		goto scanps;
-	for (uint i = 0; i < num; ++i) {
-		if (XGetWindowAttributes(dpy, wins[i], &attrs) == 0 ||
-				attrs.override_redirect ||
-				XGetTransientForHint(dpy, wins[i], &win1))
-			continue;
-		if (attrs.map_state == IsViewable ||
-				getstate(wins[i]) == IconicState)
-			manage(wins[i], &attrs);
-	}
-	for (uint i = 0; i < num; ++i) { /* handle transients */
-		if (XGetWindowAttributes(dpy, wins[i], &attrs) == 0)
-			continue;
-		if (XGetTransientForHint(dpy, wins[i], &win1) &&
-				(attrs.map_state == IsViewable ||
-				getstate(wins[i]) == IconicState))
-			manage(wins[i], &attrs);
-	}
-	if (wins)
-		XFree(wins);
-
-scanps:
 	XSync(dpy, false);
 	handle_events();
 	XCloseDisplay(dpy);
