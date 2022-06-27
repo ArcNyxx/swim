@@ -275,6 +275,8 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 			}
 		}
 
+		break; // TODO
+
 		if (!*text) {
 			break;
 		} else if (nextfont) {

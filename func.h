@@ -25,6 +25,5 @@ void updatebars(void);
 int updategeom(void);
 void updatesizehints(Client *c);
 void updatewindowtype(Client *c);
-void updatewmhints(Client *c);
 
 #endif /* FUNC_H */

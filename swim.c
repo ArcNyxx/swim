@@ -2,24 +2,17 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
-#include <X11/X.h>
 #include <signal.h>
-#include <sys/wait.h>
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <X11/cursorfont.h>
-#include <X11/keysym.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
-#include <X11/Xutil.h>
-#include <X11/Xft/Xft.h>
-#include <X11/XKBlib.h>
 
 #include "bar.h"
 #include "config.h"
@@ -53,14 +46,14 @@ sighandle(int null)
 }
 
 static int
-xchkwm(Display *dpy, XErrorEvent *evt)
+xchkwm(Display *null, XErrorEvent *evt)
 {
 	die("swim: another window manager already running\n");
 	return 1;
 }
 
 static int
-xerror(Display *dpy, XErrorEvent *evt)
+xerror(Display *null, XErrorEvent *evt)
 {
 	switch (evt->error_code) {
 	case BadMatch:
@@ -87,7 +80,7 @@ xerror(Display *dpy, XErrorEvent *evt)
 	}
 	fprintf(stderr, "swim: fatal error: request (%d), error (%d)\n",
 			evt->request_code, evt->error_code);
-	return xeorig(dpy, evt); /* may exit */
+	return xeorig(null, evt); /* may exit */
 }
 
 int
@@ -150,11 +143,9 @@ main(void)
 	XSync(dpy, false);
 	XSetErrorHandler(xerror);
 	XSync(dpy, false);
-
 	grabkeys(dpy);
-	focus(NULL);
-	XSync(dpy, false);
 
+	focus(NULL);
 	handle_events();
 	XCloseDisplay(dpy);
 }

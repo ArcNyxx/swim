@@ -26,6 +26,7 @@
 
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void unmanage(Client *cli, bool dest);
+static void updatewmhints(Client *c);
 
 static void buttonpress      (XEvent *evt);
 static void clientmessage    (XEvent *evt);
@@ -103,6 +104,22 @@ unmanage(Client *cli, bool dest)
 					XA_WINDOW, 32, PropModeAppend,
 					(unsigned char *)&itc->win, 1);
 	tile(mon);
+}
+
+static void
+updatewmhints(Client *c)
+{
+	XWMHints *wmh;
+
+	if ((wmh = XGetWMHints(dpy, c->win))) {
+		if (c == selmon->sel && wmh->flags & XUrgencyHint) {
+			wmh->flags &= ~XUrgencyHint;
+			XSetWMHints(dpy, c->win, wmh);
+		} else
+			c->isurgent = (wmh->flags & XUrgencyHint) ? 1 : 0;
+		c->neverfocus = wmh->flags & InputHint ? !wmh->input : 0;
+		XFree(wmh);
+	}
 }
 
 static void
@@ -420,7 +437,7 @@ propertynotify(XEvent *evt)
 	XPropertyEvent *pre = &evt->xproperty;
 	if (pre->window == root && pre->atom == XA_WM_NAME) {
 		gettextprop(root, XA_WM_NAME, stext, sizeof(stext));
-		drawbar(selmon);
+		drawbars();
 	} else if (pre->state != PropertyDelete &&
 			(c = wintoclient(pre->window)) != NULL) {
 		Window tr;

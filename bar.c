@@ -25,11 +25,9 @@ drawbar(const Monitor *mon)
 		return;
 
 	int x, w, tw = 0;
-	if (mon == selmon) {
-		drw_setscheme(drw, scheme[ClrNorm]);
-		tw = drw_fontset_getwidth(drw, stext);
-		drw_text(drw, mon->ww - tw, 0, tw, PADH, 0, stext, 0);
-	}
+	drw_setscheme(drw, scheme[ClrNorm]);
+	tw = drw_fontset_getwidth(drw, stext);
+	drw_text(drw, mon->ww - tw, 0, tw, PADH, 0, stext, 0);
 
 	int occ = 0, urg = 0;
 	for (Client *cli = mon->clients; cli != NULL; cli = cli->next)

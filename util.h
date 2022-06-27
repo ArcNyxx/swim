@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 
+#include "grab.h"
+
 #define MAX(num1, num2) ((num1) > (num2) ? (num1) : (num2))
 #define MIN(num1, num2) ((num1) < (num2) ? (num1) : (num2))
 #define BET(mid, low, high) ((mid) >= (low) && (mid) <= (high))
