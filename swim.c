@@ -36,7 +36,7 @@ Atom wmatom[WMLast], netatom[NetLast];
 Clr **scheme;
 Display *dpy;
 Drw *drw;
-Monitor *mons, *selmon;
+Monitor *mons, *sel;
 Window root;
 
 static void

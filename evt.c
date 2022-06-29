@@ -48,7 +48,7 @@ char stext[256] = "", execa[256] = "";
 bool running = true;
 
 extern Display *dpy;
-extern Monitor *selmon, *mons;
+extern Monitor *sel, *mons;
 extern Window root;
 extern Drw *drw;
 extern Atom wmatom[WMLast], netatom[NetLast];
@@ -112,7 +112,7 @@ updatewmhints(Client *c)
 	XWMHints *wmh;
 
 	if ((wmh = XGetWMHints(dpy, c->win))) {
-		if (c == selmon->sel && wmh->flags & XUrgencyHint) {
+		if (c == sel->sel && wmh->flags & XUrgencyHint) {
 			wmh->flags &= ~XUrgencyHint;
 			XSetWMHints(dpy, c->win, wmh);
 		} else
@@ -131,26 +131,27 @@ buttonpress(XEvent *evt)
 	int click = ClkRootWin;
 	XButtonPressedEvent *bpe = &evt->xbutton;
 
-	if ((mon = wintomon(bpe->window)) != NULL && mon != selmon) {
-		unfocus(selmon->sel, 0);
-		selmon = mon;
+	if ((mon = wintomon(bpe->window)) != NULL && mon != sel) {
+		unfocus(sel->sel, 0);
+		sel = mon;
 		focus(NULL);
 	}
 
-	if (bpe->window == selmon->barwin) {
+	if (bpe->window == sel->barwin) {
 		int i = 0, x = 0;
 		do
-			x += TEXTW(drw, tags[i]) + PADW;
+			x += drw_fontset_getwidth(drw, tags[i]) + PADW;
 		while (bpe->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags))
 			click = ClkTagBar, arg.n = 1 << i;
-		else if (bpe->x > selmon->ww - TEXTW(drw, stext) + PADW)
+		else if (bpe->x > sel->ww -
+				drw_fontset_getwidth(drw, stext) + PADW)
 			click = ClkStatusText;
 		else
 			click = ClkWinTitle;
-	} else if ((client = wintoclient(bpe->window)) != NULL) {
+	} else if ((client = wintocli(bpe->window)) != NULL) {
 		focus(client);
-		restack(selmon);
+		restack(sel);
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		click = ClkClientWin;
 	}
@@ -172,7 +173,7 @@ clientmessage(XEvent *evt)
 {
 	Client *client;
 	XClientMessageEvent *cme = &evt->xclient;
-	if ((client = wintoclient(cme->window)) == NULL)
+	if ((client = wintocli(cme->window)) == NULL)
 		return;
 	if (cme->message_type == netatom[NetWMState]) {
 		if (cme->data.l[1] == (long)netatom[NetWMFullscreen] ||
@@ -181,7 +182,7 @@ clientmessage(XEvent *evt)
 					cme->data.l[0] == 2) ||
 					cme->data.l[0] == 1);
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
-		if (client != selmon->sel && !client->isurgent)
+		if (client != sel->sel && !client->isurgent)
 			seturgent(client, 1);
 	}
 }
@@ -218,7 +219,7 @@ configurerequest(XEvent *evt)
 {
 	Client *c;
 	XConfigureRequestEvent *cre = &evt->xconfigurerequest;
-	if ((c = wintoclient(cre->window)) != NULL) {
+	if ((c = wintocli(cre->window)) != NULL) {
 		if (c->isfloating) {
 			if (cre->value_mask & CWX)
 				c->oldx = c->x, c->x = c->mon->mx + cre->x;
@@ -259,7 +260,7 @@ static void
 destroynotify(XEvent *evt)
 {
 	Client *client;
-	if ((client = wintoclient(evt->xdestroywindow.window)) != NULL)
+	if ((client = wintocli(evt->xdestroywindow.window)) != NULL)
 		unmanage(client, 1);
 }
 
@@ -271,12 +272,12 @@ enternotify(XEvent *evt)
 			cre->window != root)
 		return;
 
-	Client *client = wintoclient(cre->window);
+	Client *client = wintocli(cre->window);
 	Monitor *mon = client != NULL ? client->mon : wintomon(cre->window);
-	if (mon != selmon) {
-		unfocus(selmon->sel, 1);
-		selmon = mon;
-	} else if (client == NULL || client == selmon->sel)
+	if (mon != sel) {
+		unfocus(sel->sel, 1);
+		sel = mon;
+	} else if (client == NULL || client == sel->sel)
 		return;
 	focus(client);
 }
@@ -293,8 +294,8 @@ expose(XEvent *evt)
 static void
 focusin(XEvent *evt)
 {
-	if (selmon->sel != NULL && evt->xfocus.window != selmon->sel->win)
-		setfocus(selmon->sel); /* handles broken clients */
+	if (sel->sel != NULL && evt->xfocus.window != sel->sel->win)
+		setfocus(sel->sel); /* handles broken clients */
 }
 
 static void
@@ -331,7 +332,7 @@ keypress(XEvent *evt)
 				sizeof(execa) - exec) - 1;
 		break;
 	}
-	drawbar(selmon);
+	drawbar(sel);
 }
 
 static void
@@ -348,7 +349,7 @@ maprequest(XEvent *evt)
 	static XWindowAttributes wa;
 	Window win = evt->xmaprequest.window;
 	if (!XGetWindowAttributes(dpy, win, &wa) ||
-			wa.override_redirect || wintoclient(win) != NULL)
+			wa.override_redirect || wintocli(win) != NULL)
 		return;
 
 	Client *cli = scalloc(1, sizeof(Client));
@@ -366,10 +367,10 @@ maprequest(XEvent *evt)
 	Window trans;
 	Client *transc;
 	if (XGetTransientForHint(dpy, win, &trans) &&
-			(transc = wintoclient(trans)) != NULL)
+			(transc = wintocli(trans)) != NULL)
 		cli->mon = transc->mon, cli->tags = transc->tags;
 	else
-		cli->mon = selmon, cli->tags = cli->mon->tags;
+		cli->mon = sel, cli->tags = cli->mon->tags;
 
 	if (cli->x + WIDTH(cli) > cli->mon->mx + cli->mon->mw)
 		cli->x = cli->mon->mx + cli->mon->mw - WIDTH(cli);
@@ -405,8 +406,8 @@ maprequest(XEvent *evt)
 			PropModeReplace, (unsigned char *)(long[])
 			{ NormalState, 0 }, 2);
 
-	if (cli->mon == selmon)
-		unfocus(selmon->sel, 0);
+	if (cli->mon == sel)
+		unfocus(sel->sel, 0);
 	cli->mon->sel = cli;
 	tile(cli->mon);
 	XMapWindow(dpy, cli->win);
@@ -421,10 +422,10 @@ motionnotify(XEvent *evt)
 
 	if (evt->xmotion.window != root)
 		return;
-	if ((newmon = recttomon(evt->xmotion.x_root, evt->xmotion.y_root,
+	if ((newmon = rectomon(evt->xmotion.x_root, evt->xmotion.y_root,
 				1, 1)) != mon && mon != NULL) {
-		unfocus(selmon->sel, 1);
-		selmon = newmon;
+		unfocus(sel->sel, 1);
+		sel = newmon;
 		focus(NULL);
 	}
 	mon = newmon;
@@ -439,11 +440,11 @@ propertynotify(XEvent *evt)
 		gettextprop(root, XA_WM_NAME, stext, sizeof(stext));
 		drawbars();
 	} else if (pre->state != PropertyDelete &&
-			(c = wintoclient(pre->window)) != NULL) {
+			(c = wintocli(pre->window)) != NULL) {
 		Window tr;
 		if (pre->atom == XA_WM_TRANSIENT_FOR && !c->isfloating &&
 				XGetTransientForHint(dpy, c->win, &tr) &&
-				(c->isfloating = wintoclient(tr) != NULL)) {
+				(c->isfloating = wintocli(tr) != NULL)) {
 			tile(c->mon);
 		} else if (pre->atom == XA_WM_NORMAL_HINTS) {
 			c->hintsvalid = 0;
@@ -470,7 +471,7 @@ static void
 unmapnotify(XEvent *evt)
 {
 	Client *client;
-	if ((client = wintoclient(evt->xunmap.window)) != NULL) {
+	if ((client = wintocli(evt->xunmap.window)) != NULL) {
 		if (evt->xunmap.window)
 			XChangeProperty(dpy, client->win, wmatom[WMState],
 					wmatom[WMState], 32, PropModeReplace,

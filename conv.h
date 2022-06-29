@@ -7,9 +7,9 @@
 
 #include "struct.h"
 
-Monitor *recttomon(int x, int y, int w, int h);
+Monitor *rectomon(int x, int y, int w, int h);
 Monitor *dirtomon(int dir);
-Client *wintoclient(Window win);
+Client  *wintocli(Window win);
 Monitor *wintomon(Window win);
 
 #endif /* CONV_H */

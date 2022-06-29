@@ -2,6 +2,7 @@
  * Copyright (C) 2022 ArcNyxx
  * see LICENCE file for licensing information */
 
+#include <X11/X.h>
 #include <stdbool.h>
 
 #include <X11/Xlib.h>
@@ -38,13 +39,15 @@ grabbuttons(Display *dpy, Client *client, int focused)
 
 	if (!focused)
 		XGrabButton(dpy, AnyButton, AnyModifier, client->win, 0,
-				BUTTON, GrabModeSync, GrabModeSync, 0, 0);
+				ButtonPressMask | ButtonReleaseMask,
+				GrabModeSync, GrabModeSync, 0, 0);
 	for (int i = 0; i < LENGTH(buttons); ++i) {
 		if (buttons[i].click != ClkClientWin)
 			continue;
 		for (int j = 0; j < LENGTH(mods); ++j)
 			XGrabButton(dpy, buttons[i].button, buttons[i].mask |
-					mods[j], client->win, false, BUTTON,
+					mods[j], client->win, false,
+					ButtonPressMask | ButtonReleaseMask,
 					GrabModeAsync, GrabModeSync, 0, 0);
 	}
 }

@@ -11,7 +11,7 @@
 #define BOXS (PADW / 9)
 #define BOXW (PADW / 6 + 2)
 
-extern Monitor *selmon, *mons;
+extern Monitor *sel, *mons;
 extern Drw *drw;
 extern Clr **scheme;
 
@@ -42,8 +42,8 @@ drawbar(const Monitor *mon)
 				tags[i], (urg & 1 << i) != 0);
 		if ((occ & 1 << i) != 0)
 			drw_rect(drw, x + BOXS, BOXS, BOXW, BOXW,
-					mon == selmon && selmon->sel != NULL &&
-					(selmon->sel->tags & 1 << i) != 0,
+					mon == sel && sel->sel != NULL &&
+					(sel->sel->tags & 1 << i) != 0,
 					(urg & 1 << 1) != 0);
 		x += w;
 	}
@@ -53,7 +53,7 @@ drawbar(const Monitor *mon)
 			drw_setscheme(drw, scheme[ClrSel]);
 			drw_text(drw, x, 0, w, PADH, PADW / 2, execa, 0);
 		} else if (mon->sel != NULL) {
-			drw_setscheme(drw, scheme[mon == selmon ?
+			drw_setscheme(drw, scheme[mon == sel ?
 					ClrSel : ClrNorm]);
 			drw_text(drw, x, 0, w, PADH, PADW / 2,
 					mon->sel->name, 0);

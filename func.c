@@ -29,7 +29,7 @@ extern Atom wmatom[WMLast], netatom[NetLast];
 extern Clr **scheme;
 extern Display *dpy;
 extern Drw *drw;
-extern Monitor *mons, *selmon;
+extern Monitor *mons, *sel;
 extern Window root;
 
 void
@@ -113,12 +113,12 @@ void
 focus(Client *c)
 {
 	if (!c || !VISIBLE(c))
-		for (c = selmon->stack; c && !VISIBLE(c); c = c->snext);
-	if (selmon->sel && selmon->sel != c)
-		unfocus(selmon->sel, 0);
+		for (c = sel->stack; c && !VISIBLE(c); c = c->snext);
+	if (sel->sel && sel->sel != c)
+		unfocus(sel->sel, 0);
 	if (c) {
-		if (c->mon != selmon)
-			selmon = c->mon;
+		if (c->mon != sel)
+			sel = c->mon;
 		if (c->isurgent)
 			seturgent(c, 0);
 		detachstack(c);
@@ -130,7 +130,7 @@ focus(Client *c)
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
-	selmon->sel = c;
+	sel->sel = c;
 	drawbars();
 }
 
@@ -369,8 +369,8 @@ updategeom(void)
 				c->next = c->mon->clients; c->mon->clients = c;
 				c->snext = c->mon->stack; c->mon->stack = c;
 			}
-			if (m == selmon)
-				selmon = mons;
+			if (m == sel)
+				sel = mons;
 
 
 			if (m == mons) {
@@ -402,8 +402,8 @@ updategeom(void)
 		}
 	}
 	if (dirty) {
-		selmon = mons;
-		selmon = wintomon(root);
+		sel = mons;
+		sel = wintomon(root);
 	}
 	return dirty;
 }

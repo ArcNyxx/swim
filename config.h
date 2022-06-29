@@ -20,7 +20,6 @@
 extern const int  borderw;
 extern const int  mfact;
 extern const int  nmaster;
-extern const int  snap;
 extern const bool rhints;
 extern const bool showbar;
 extern const bool topbar;

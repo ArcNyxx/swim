@@ -9,28 +9,13 @@
 #include "util.h"
 
 extern Display *dpy;
-extern Monitor *selmon, *mons;
+extern Monitor *sel, *mons;
 
 Monitor *
-dirtomon(int dir)
-{
-	Monitor *mon = NULL;
-	if (dir > 0) {
-		if ((mon = selmon->next) == NULL)
-			mon = mons;
-	} else if (selmon == mons) {
-		for (mon = mons; mon->next != NULL; mon = mon->next);
-	} else {
-		for (mon = mons; mon->next != selmon; mon = mon->next);
-	}
-	return mon;
-}
-
-Monitor *
-recttomon(int x, int y, int w, int h)
+rectomon(int x, int y, int w, int h)
 {
 	int area, lastarea = 0;
-	Monitor *mon, *save = selmon;
+	Monitor *mon, *save = sel;
 	for (mon = mons; mon != NULL; mon = mon->next)
 		if ((area = MAX(0, MIN(x + w, mon->wx + mon->ww) -
 				MAX(x, mon->wx)) *
@@ -40,8 +25,23 @@ recttomon(int x, int y, int w, int h)
 	return save;
 }
 
+Monitor *
+dirtomon(int dir)
+{
+	Monitor *mon = NULL;
+	if (dir > 0) {
+		if ((mon = sel->next) == NULL)
+			mon = mons;
+	} else if (sel == mons) {
+		for (mon = mons; mon->next != NULL; mon = mon->next);
+	} else {
+		for (mon = mons; mon->next != sel; mon = mon->next);
+	}
+	return mon;
+}
+
 Client *
-wintoclient(Window win)
+wintocli(Window win)
 {
 	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
 		for (Client *client = mon->clients;
@@ -60,11 +60,11 @@ wintomon(Window win)
 
 	if (win == root && XQueryPointer(dpy, root, &dummy, &dummy, &x, &y,
 			&null, &null, (unsigned int *)&null))
-		return recttomon(x, y, 1, 1);
+		return rectomon(x, y, 1, 1);
 	for (Monitor *mon = mons; mon != NULL; mon = mon->next)
 		if (win == mon->barwin)
 			return mon;
-	if ((client = wintoclient(win)))
+	if ((client = wintocli(win)))
 		return client->mon;
-	return selmon;
+	return sel;
 }

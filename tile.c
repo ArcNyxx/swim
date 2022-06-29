@@ -59,9 +59,8 @@ arrange(Monitor *mon)
 				GAPIV*gap * (numdown - 1)) / numdown;
 		resize(client, mon->wx + GAPOH*gap + width + GAPIH*gap,
 				mon->wy + totgap + GAPOH*gap,
-				mon->ww - width - 2*borderw -
-				2*GAPOV*gap - GAPIV*gap,
-				height - 2*borderw);
+				mon->ww - width - 2*borderw - 2*GAPOV*gap -
+				GAPIV*gap, height - 2*borderw);
 
 		if (totgap + HEIGHT(client) + GAPIH*gap < mon->wh)
 			totgap += HEIGHT(client) + GAPIH*gap;

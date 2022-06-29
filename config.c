@@ -21,7 +21,6 @@
 const int  borderw = 1;  /* border width of windows */
 const int  mfact   = 50; /* percentage factor of master area */
 const int  nmaster = 1;  /* number of clients in master area */
-const int  snap    = 32; /* mouse functions snap boundary */
 const bool rhints  = 0;  /* enable client resize hints */
 const bool showbar = 1;  /* show status bar */
 const bool topbar  = 1;  /* status bar on top */
