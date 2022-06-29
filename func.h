@@ -5,6 +5,8 @@
 #ifndef FUNC_H
 #define FUNC_H
 
+#include <stdbool.h>
+
 #include <X11/Xlib.h>
 
 #include "struct.h"
@@ -22,7 +24,7 @@ void seturgent(Client *c, int urg);
 void unfocus(Client *c, int setfocus);
 void updatebarpos(Monitor *m);
 void updatebars(void);
-int updategeom(void);
+bool updategeom(void);
 void updatesizehints(Client *c);
 void updatewindowtype(Client *c);
 

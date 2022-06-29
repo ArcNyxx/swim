@@ -134,18 +134,6 @@ focus(Client *c)
 	drawbars();
 }
 
-#ifdef XINERAMA
-static int
-isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
-{
-	while (n--)
-		if (unique[n].x_org == info->x_org && unique[n].y_org == info->y_org
-		&& unique[n].width == info->width && unique[n].height == info->height)
-			return 0;
-	return 1;
-}
-#endif /* XINERAMA */
-
 void
 resizeclient(Client *cli, int x, int y, int w, int h)
 {
@@ -309,102 +297,106 @@ updatebarpos(Monitor *m)
 		m->by = -PADH;
 }
 
-int
+
+bool
 updategeom(void)
 {
-	int dirty = 0;
+	bool dirty = false;
 
 #ifdef XINERAMA
-	if (XineramaIsActive(dpy)) {
-		int i, j, n, nn;
-		Client *c;
-		Monitor *m;
-		XineramaScreenInfo *info = XineramaQueryScreens(dpy, &nn);
-		XineramaScreenInfo *unique = NULL;
-
-		for (n = 0, m = mons; m; m = m->next, n++);
-		/* only consider unique geometries as separate screens */
-		unique = scalloc(nn, sizeof(XineramaScreenInfo));
-		for (i = 0, j = 0; i < nn; i++)
-			if (isuniquegeom(unique, j, &info[i]))
-				memcpy(&unique[j++], &info[i], sizeof(XineramaScreenInfo));
-		XFree(info);
-		nn = j;
-
-		/* new monitors if nn > n */
-		for (i = n; i < nn; i++) {
-			for (m = mons; m && m->next; m = m->next);
-			if (m) {
-				Monitor *mon = scalloc(1, sizeof(Monitor));
-				mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
-						mon->showbar = showbar;
-				m->next = mon;
-			} else {
-				Monitor *mon = scalloc(1, sizeof(Monitor));
-				mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
-						mon->showbar = showbar;
-				mons = mon;
-			}
-		}
-		for (i = 0, m = mons; i < nn && m; m = m->next, i++)
-			if (i >= n
-			|| unique[i].x_org != m->mx || unique[i].y_org != m->my
-			|| unique[i].width != m->mw || unique[i].height != m->mh)
-			{
-				dirty = 1;
-				m->mx = m->wx = unique[i].x_org;
-				m->my = m->wy = unique[i].y_org;
-				m->mw = m->ww = unique[i].width;
-				m->mh = m->wh = unique[i].height;
-				updatebarpos(m);
-			}
-		/* removed monitors if n > nn */
-		for (i = nn; i < n; i++) {
-			for (m = mons; m && m->next; m = m->next);
-			while ((c = m->clients)) {
-				dirty = 1;
-				m->clients = c->next;
-				detachstack(c);
-				c->mon = mons;
-				c->next = c->mon->clients; c->mon->clients = c;
-				c->snext = c->mon->stack; c->mon->stack = c;
-			}
-			if (m == sel)
-				sel = mons;
-
-
-			if (m == mons) {
-				mons = mons->next;
-			} else {
-				Monitor *iter = mons;
-				for (; iter != NULL && iter->next != m; iter = iter->next);
-				iter->next = m->next;
-			}
-			XUnmapWindow(dpy, m->barwin);
-			XDestroyWindow(dpy, m->barwin);
-			free(m);
-		}
-		free(unique);
-	} else
+	if (!XineramaIsActive(dpy)) {
 #endif /* XINERAMA */
-	{ /* default monitor setup */
-		if (!mons) {
-			Monitor *mon = scalloc(1, sizeof(Monitor));
-			mon->tags = 1, mon->mfact = mfact, mon->nmaster = nmaster,
-					mon->showbar = showbar;
-			mons = mon;
-		}
-		if (mons->mw != sw || mons->mh != sh) {
-			dirty = 1;
-			mons->mw = mons->ww = sw;
-			mons->mh = mons->wh = sh;
-			updatebarpos(mons);
+	if (mons == NULL) {
+		mons = scalloc(1, sizeof(Monitor));
+		mons->tags = 1, mons->mfact = mfact, mons->nmaster = nmaster,
+				mons->showbar = showbar;
+	}
+	if (mons->mw != sw || mons->mh != sh) {
+		dirty = true;
+		mons->mw = mons->ww = sw, mons->mh = mons->wh = sh;
+		updatebarpos(mons);
+	}
+	goto end;
+#ifdef XINERAMA
+	}
+
+	size_t num = 0, new;
+	for (Monitor *mon = mons; mon != NULL; mon = mon->next, ++num);
+	XineramaScreenInfo *inf = XineramaQueryScreens(dpy, &new);
+
+	for (size_t i = 0; i < new; ++i)
+		for (size_t j = 0; j < i; ++j)
+			if (
+				inf[i].x_org  == inf[j].x_org &&
+				inf[i].y_org  == inf[j].y_org &&
+				inf[i].width  == inf[j].width &&
+				inf[i].height == inf[j].height
+			) {
+				memmove(&inf[i], &inf[i + 1], (new - i) *
+						sizeof(XineramaScreenInfo));
+				--new;
+			}
+
+	for (size_t i = num; i < new; ++i) {
+		Monitor *mon, *tmp = scalloc(1, sizeof(Monitor));
+		for (mon = mons; mon != NULL && mon->next != NULL;
+				mon = mon->next);
+		tmp->tags = 1, tmp->mfact = mfact, tmp->nmaster = nmaster,
+				tmp->showbar = showbar;
+		if (mon != NULL)
+			mon->next = tmp;
+		else
+			mons = tmp;
+	}
+
+	size_t i;
+	Monitor *mon;
+	for (mon = mons, i = 0; mon != NULL && i < new; mon = mon->next, ++i) {
+		if (i >= num ||
+			inf[i].x_org != mon->mx || inf[i].y_org  != mon->my ||
+			inf[i].width != mon->mw || inf[i].height != mon->mh
+		) {
+			dirty = true;
+			mon->mx = mon->wx = inf[i].x_org;
+			mon->my = mon->wy = inf[i].y_org;
+			mon->mw = mon->ww = inf[i].width;
+			mon->mh = mon->wh = inf[i].height;
+			updatebarpos(mon);
 		}
 	}
-	if (dirty) {
-		sel = mons;
-		sel = wintomon(root);
+
+	for (size_t i = 0; i < num; ++i) {
+		for (Monitor *mon = mons; mon != NULL && mon->next != NULL;
+				mon = mon->next);
+		for (Client *cli = mon->clients; cli != NULL;
+				cli = mon->clients) {
+			dirty = true;
+			mon->clients = cli->next;
+			detachstack(cli);
+			cli->mon = mons;
+			cli->next = cli->mon->clients; cli->mon->clients = cli;
+			cli->snext = cli->mon->stack; cli->mon->stack = cli;
+		}
+		if (mon == sel)
+			sel = mons;
+
+		if (mon == mons) {
+			mons = mons->next;
+		} else {
+			Monitor *iter = mons;
+			for (; iter != NULL && iter->next != mon; iter = iter->next);
+			iter->next = mon->next;
+		}
+		XUnmapWindow(dpy, mon->barwin);
+		XDestroyWindow(dpy, mon->barwin);
+		free(mon);
 	}
+
+	XFree(inf);
+#endif /* XINERAMA */
+end:
+	if (dirty)
+		sel = mons, sel = wintomon(root);
 	return dirty;
 }
 

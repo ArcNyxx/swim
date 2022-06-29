@@ -43,5 +43,5 @@ utf8decode(const char *restrict str, wchar_t *restrict val)
 	if (len >= 1 && decoded <= utfmax[len] && decoded >= utfmin[len] &&
 			(decoded < 0xD800 || decoded > 0xDFFF))
 		*val = decoded;
-	return len;
+	return MAX(1, len);
 }
