@@ -104,7 +104,7 @@ main(void)
 	for (size_t i = 0; i < LENGTH(colors); i++)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 
-	updategeom(); updatebars(); drawbars();
+	updategeom(); drawbars();
 
 	wmatom [WMProtocols]           = ATOM("WM_PROTOCOLS");
 	wmatom [WMDelete]              = ATOM("WM_DELETE_WINDOW");

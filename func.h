@@ -23,9 +23,7 @@ void setfullscreen(Client *c, int fullscreen);
 void seturgent(Client *c, int urg);
 void unfocus(Client *c, int setfocus);
 void updatebarpos(Monitor *m);
-void updatebars(void);
 bool updategeom(void);
 void updatesizehints(Client *c);
-void updatewindowtype(Client *c);
 
 #endif /* FUNC_H */

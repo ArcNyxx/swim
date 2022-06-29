@@ -27,6 +27,7 @@
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void unmanage(Client *cli, bool dest);
 static void updatewmhints(Client *c);
+static void updatewindowtype(Client *c);
 
 static void buttonpress      (XEvent *evt);
 static void clientmessage    (XEvent *evt);
@@ -123,6 +124,27 @@ updatewmhints(Client *c)
 }
 
 static void
+updatewindowtype(Client *cli)
+{
+	unsigned long null;
+	unsigned char *ptr;
+	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMState], 0,
+			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
+			&null, &null, &ptr) && ptr != NULL) {
+		if (*(Atom *)ptr == netatom[NetWMFullscreen])
+			setfullscreen(cli, true);
+		XFree(ptr);
+	}
+	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMWindowType], 0,
+			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
+			&null, &null, &ptr) && ptr != NULL) {
+		if (*(Atom *)ptr == netatom[NetWMWindowTypeDialog])
+			cli->isfloating = true;
+		XFree(ptr);
+	}
+}
+
+static void
 buttonpress(XEvent *evt)
 {
 	Monitor *mon;
@@ -199,7 +221,6 @@ configurenotify(XEvent *evt)
 
 	if (updategeom() || res) {
 		drw_resize(drw, sw, PADH);
-		updatebars();
 
 		for (Monitor *mon = mons; mon != NULL; mon = mon->next) {
 			for (Client *cli = mon->clients; cli != NULL;

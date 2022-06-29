@@ -259,30 +259,6 @@ unfocus(Client *c, int setfocus)
 }
 
 void
-updatebars(void)
-{
-	Monitor *m;
-	XSetWindowAttributes wa = {
-		.override_redirect = True,
-		.background_pixmap = ParentRelative,
-		.event_mask = ButtonPressMask|ExposureMask
-	};
-
-	char swim[] = "swim";
-	XClassHint ch = { swim, swim };
-
-	for (m = mons; m; m = m->next) {
-		if (m->barwin)
-			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, PADH, 0, DefaultDepth(dpy, DefaultScreen(dpy)),
-				CopyFromParent, DefaultVisual(dpy, DefaultScreen(dpy)),
-				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XMapRaised(dpy, m->barwin);
-		XSetClassHint(dpy, m->barwin, &ch);
-	}
-}
-
-void
 updatebarpos(Monitor *m)
 {
 	m->wy = m->my;
@@ -300,6 +276,7 @@ updatebarpos(Monitor *m)
 bool
 updategeom(void)
 {
+	Monitor *mon;
 	bool res = false; /* resizing necessary */
 	if (mons == NULL) {
 		mons = scalloc(1, sizeof(Monitor));
@@ -319,7 +296,6 @@ updategeom(void)
 #ifdef XINERAMA
 	}
 
-	Monitor *mon;
 	int num = 0, new, i;
 	for (mon = mons; mon != NULL; mon = mon->next, ++num);
 	XineramaScreenInfo *inf = XineramaQueryScreens(dpy, &new);
@@ -388,29 +364,25 @@ updategeom(void)
 
 	XFree(inf);
 #endif /* XINERAMA */
-end:
+end: ;
+	char swim[] = "swim";
+	XClassHint ch = { swim, swim };
+	XSetWindowAttributes wa = { .override_redirect = true,
+			.event_mask = ButtonPressMask | ExposureMask,
+			.background_pixmap = ParentRelative };
+	for (mon = mons; mon != NULL; mon = mon->next)
+		if (mon->barwin == 0) {
+			mon->barwin = XCreateWindow(dpy, root, mon->wx, mon->
+					by, mon->ww, PADH, 0, DefaultDepth(dpy,
+					DefaultScreen(dpy)), CopyFromParent,
+					DefaultVisual(dpy, DefaultScreen(dpy)),
+					CWOverrideRedirect | CWBackPixmap |
+					CWEventMask, &wa);
+			XMapRaised(dpy, mon->barwin);
+			XSetClassHint(dpy, mon->barwin, &ch);
+		}
+
 	if (res)
 		sel = mons, sel = wintomon(root);
 	return res;
-}
-
-void
-updatewindowtype(Client *cli)
-{
-	unsigned long null;
-	unsigned char *ptr;
-	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMState], 0,
-			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
-			&null, &null, &ptr) && ptr != NULL) {
-		if (*(Atom *)ptr == netatom[NetWMFullscreen])
-			setfullscreen(cli, true);
-		XFree(ptr);
-	}
-	if (XGetWindowProperty(dpy, cli->win, netatom[NetWMWindowType], 0,
-			sizeof(Atom), false, XA_ATOM, &null, (int *)&null,
-			&null, &null, &ptr) && ptr != NULL) {
-		if (*(Atom *)ptr == netatom[NetWMWindowTypeDialog])
-			cli->isfloating = true;
-		XFree(ptr);
-	}
 }
