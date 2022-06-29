@@ -300,7 +300,7 @@ updatebarpos(Monitor *m)
 bool
 updategeom(void)
 {
-	bool dirty = false; /* resizing necessary */
+	bool res = false; /* resizing necessary */
 	if (mons == NULL) {
 		mons = scalloc(1, sizeof(Monitor));
 		mons->tags = 1, mons->mfact = mfact, mons->nmaster = nmaster,
@@ -311,7 +311,7 @@ updategeom(void)
 	if (!XineramaIsActive(dpy)) {
 #endif /* XINERAMA */
 		if (mons->mw != sw || mons->mh != sh) {
-			dirty = true;
+			res = true;
 			mons->mw = mons->ww = sw, mons->mh = mons->wh = sh;
 			updatebarpos(mons);
 		}
@@ -352,7 +352,7 @@ updategeom(void)
 			inf[i].x_org != mon->mx || inf[i].y_org  != mon->my ||
 			inf[i].width != mon->mw || inf[i].height != mon->mh
 		) {
-			dirty = true;
+			res = true;
 			mon->mx = mon->wx = inf[i].x_org;
 			mon->my = mon->wy = inf[i].y_org;
 			mon->mw = mon->ww = inf[i].width;
@@ -365,7 +365,7 @@ updategeom(void)
 		for (mon = mons; mon->next != NULL; mon = mon->next);
 		for (Client *cli = mon->clients; cli != NULL;
 				cli = mon->clients) {
-			dirty = true;
+			res = true;
 
 			mon->clients = cli->next;
 			detachstack(cli);
@@ -389,9 +389,9 @@ updategeom(void)
 	XFree(inf);
 #endif /* XINERAMA */
 end:
-	if (dirty)
+	if (res)
 		sel = mons, sel = wintomon(root);
-	return dirty;
+	return res;
 }
 
 void

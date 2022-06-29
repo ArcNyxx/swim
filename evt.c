@@ -191,20 +191,21 @@ static void
 configurenotify(XEvent *evt)
 {
 	extern int sw, sh;
-	XConfigureEvent *cfe = &evt->xconfigure;
-	if (cfe->window != root)
-		return;
-	int dirty = (sw != cfe->width || sh != cfe->height);
-	sw = cfe->width, sh = cfe->height;
 
-	if (updategeom() || dirty) {
+	if (evt->xconfigure.window != root)
+		return;
+	bool res = sw != evt->xconfigure.width || sh != evt->xconfigure.height;
+	sw = evt->xconfigure.width, sh = evt->xconfigure.height;
+
+	if (updategeom() || res) {
 		drw_resize(drw, sw, PADH);
 		updatebars();
+
 		for (Monitor *mon = mons; mon != NULL; mon = mon->next) {
-			for (Client *client = mon->clients; client != NULL;
-					client = client->next)
-				if (client->isfullscreen)
-					resizeclient(client, mon->mx, mon->my,
+			for (Client *cli = mon->clients; cli != NULL;
+					cli = cli->next)
+				if (cli->isfullscreen)
+					resizeclient(cli, mon->mx, mon->my,
 							mon->mw, mon->mh);
 			XMoveResizeWindow(dpy, mon->barwin, mon->wx, mon->by,
 					mon->ww, PADH);
