@@ -104,6 +104,9 @@ main(void)
 	for (size_t i = 0; i < LENGTH(colors); i++)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 
+	mons = scalloc(1, sizeof(Monitor));
+	mons->tags = 1, mons->mfact = mfact, mons->nmaster = nmaster,
+			mons->showbar = showbar;
 	updategeom(); drawbars();
 
 	wmatom [WMProtocols]           = ATOM("WM_PROTOCOLS");

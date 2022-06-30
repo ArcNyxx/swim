@@ -14,6 +14,7 @@
 #define GAPOH 8
 #define GAPOV 8
 
+#define TOPB
 #define PADW 16
 #define PADH 20
 
@@ -22,7 +23,6 @@ extern const int  mfact;
 extern const int  nmaster;
 extern const bool rhints;
 extern const bool showbar;
-extern const bool topbar;
 
 extern const char *font;
 extern const char *tags[9];

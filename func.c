@@ -265,10 +265,11 @@ updatebarpos(Monitor *m)
 	m->wh = m->mh;
 	if (m->showbar) {
 		m->wh -= PADH;
-		if (topbar)
-			m->by = m->wy, m->wy += PADH;
-		else
-			m->by = m->wy + m->wh;
+#ifdef TOPB
+		m->by = m->wy, m->wy += PADH;
+#else
+		m->by = m->wy + m->wh;
+#endif /* TOPB */
 	} else
 		m->by = -PADH;
 }
@@ -278,11 +279,6 @@ updategeom(void)
 {
 	Monitor *mon;
 	bool res = false; /* resizing necessary */
-	if (mons == NULL) {
-		mons = scalloc(1, sizeof(Monitor));
-		mons->tags = 1, mons->mfact = mfact, mons->nmaster = nmaster,
-				mons->showbar = showbar;
-	}
 
 #ifdef XINERAMA
 	if (!XineramaIsActive(dpy)) {
