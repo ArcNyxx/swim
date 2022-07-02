@@ -15,13 +15,13 @@
 #define GAPOV 8
 
 #define TOPB
+/* #define RHINTS */
 #define PADW 16
 #define PADH 20
 
 extern const int  borderw;
 extern const int  mfact;
 extern const int  nmaster;
-extern const bool rhints;
 extern const bool showbar;
 
 extern const char *font;

@@ -87,8 +87,10 @@ resize(Client *cli, int x, int y, int w, int h)
 	if (h < PADH)
 		h = PADH;
 
-	if (!rhints && !cli->isfloating)
+#ifndef RHINTS
+	if (!cli->isfloating)
 		goto skip_hints;
+#endif /* RHINTS */
 
 	if (!cli->hintsvalid)
 		updatesizehints(cli);
